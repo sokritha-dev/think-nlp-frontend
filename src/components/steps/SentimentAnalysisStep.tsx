@@ -13,26 +13,31 @@ type SentimentAnalysisStepProps = {
   onStepComplete: () => void;
 };
 
+// Types for the sentiment analysis results
+type TopicSentiment = {
+  topicId: number;
+  topicLabel: string;
+  positive: number;
+  neutral: number;
+  negative: number;
+  average: number;
+};
+
+type SentimentResults = {
+  byTopic: TopicSentiment[];
+  overall: {
+    positive: number;
+    neutral: number;
+    negative: number;
+    average: number;
+  };
+};
+
 const SentimentAnalysisStep = ({ labeledTopics, onStepComplete }: SentimentAnalysisStepProps) => {
   const [algorithm, setAlgorithm] = useState("vader");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [sentimentResults, setSentimentResults] = useState<{
-    byTopic: {
-      topicId: number;
-      topicLabel: string;
-      positive: number;
-      neutral: number;
-      negative: number;
-      average: number;
-    }[];
-    overall: {
-      positive: number;
-      neutral: number;
-      negative: number;
-      average: number;
-    };
-  } | null>(null);
+  const [sentimentResults, setSentimentResults] = useState<SentimentResults | null>(null);
   
   const { toast } = useToast();
 
@@ -40,99 +45,50 @@ const SentimentAnalysisStep = ({ labeledTopics, onStepComplete }: SentimentAnaly
     setAlgorithm(value);
   };
 
+  // This function would call your backend API instead of doing calculations in the frontend
   const runSentimentAnalysis = () => {
     setIsProcessing(true);
     
-    // Simulate processing time
+    // Simulate API call with mock data
     setTimeout(() => {
-      // For the demo, we'll create simple sentiment analysis results
-      const analyzeSentiment = () => {
-        // Simple word-based sentiment analysis
-        const positiveWords = new Set([
-          "good", "great", "excellent", "amazing", "outstanding", "fantastic", 
-          "wonderful", "love", "best", "awesome", "delicious", "happy", "recommend",
-          "helpful", "friendly", "perfect", "enjoy", "nice", "clean", "comfortable"
-        ]);
-        
-        const negativeWords = new Set([
-          "bad", "poor", "terrible", "awful", "worst", "horrible", "disappointed",
-          "waste", "avoid", "slow", "expensive", "dirty", "cold", "broken", "rude",
-          "difficult", "complaint", "negative", "issue", "problem", "error", "fail"
-        ]);
-        
-        // Calculate sentiment for each topic
-        const topicSentiments = labeledTopics.map(topic => {
-          let positiveCount = 0;
-          let neutralCount = 0;
-          let negativeCount = 0;
-          
-          topic.docs.forEach(doc => {
-            const words = doc.toLowerCase().split(" ");
-            let docPositive = 0;
-            let docNegative = 0;
-            
-            words.forEach(word => {
-              if (positiveWords.has(word)) docPositive++;
-              if (negativeWords.has(word)) docNegative++;
-            });
-            
-            if (docPositive > docNegative) positiveCount++;
-            else if (docNegative > docPositive) negativeCount++;
-            else neutralCount++;
-          });
-          
-          const total = topic.docs.length;
-          const positivePercent = total > 0 ? (positiveCount / total) * 100 : 0;
-          const neutralPercent = total > 0 ? (neutralCount / total) * 100 : 0;
-          const negativePercent = total > 0 ? (negativeCount / total) * 100 : 0;
-          
-          // Calculate average sentiment score (-1 to 1)
-          const average = total > 0 
-            ? ((positiveCount - negativeCount) / total) 
-            : 0;
-          
-          return {
-            topicId: topic.id,
-            topicLabel: topic.label,
-            positive: positivePercent,
-            neutral: neutralPercent,
-            negative: negativePercent,
-            average: average
-          };
-        });
-        
-        // Calculate overall sentiment
-        const totalDocs = labeledTopics.reduce((acc, topic) => acc + topic.docs.length, 0);
-        const allPositive = topicSentiments.reduce((acc, topic) => {
-          return acc + (topic.positive * topic.docs.length / 100);
-        }, 0);
-        const allNeutral = topicSentiments.reduce((acc, topic) => {
-          return acc + (topic.neutral * topic.docs.length / 100);
-        }, 0);
-        const allNegative = topicSentiments.reduce((acc, topic) => {
-          return acc + (topic.negative * topic.docs.length / 100);
-        }, 0);
-        
-        const overall = {
-          positive: totalDocs > 0 ? (allPositive / totalDocs) * 100 : 0,
-          neutral: totalDocs > 0 ? (allNeutral / totalDocs) * 100 : 0,
-          negative: totalDocs > 0 ? (allNegative / totalDocs) * 100 : 0,
-          average: totalDocs > 0 ? ((allPositive - allNegative) / totalDocs) : 0
-        };
-        
-        return { byTopic: topicSentiments, overall };
+      // Mock data that would come from your backend
+      const mockResults: SentimentResults = {
+        byTopic: labeledTopics.map(topic => ({
+          topicId: topic.id,
+          topicLabel: topic.label,
+          positive: Math.random() * 60 + 20, // random percentage between 20-80%
+          neutral: Math.random() * 40 + 10, // random percentage between 10-50%
+          negative: Math.random() * 30 + 5, // random percentage between 5-35%
+          average: Math.random() * 2 - 1, // random score between -1 and 1
+        })),
+        overall: {
+          positive: 55,
+          neutral: 30,
+          negative: 15,
+          average: 0.4
+        }
       };
       
-      const results = analyzeSentiment();
-      setSentimentResults(results);
+      // Ensure percentages add up to 100% for each topic
+      mockResults.byTopic = mockResults.byTopic.map(topic => {
+        const total = topic.positive + topic.neutral + topic.negative;
+        return {
+          ...topic,
+          positive: (topic.positive / total) * 100,
+          neutral: (topic.neutral / total) * 100,
+          negative: (topic.negative / total) * 100
+        };
+      });
+      
+      setSentimentResults(mockResults);
       setIsProcessing(false);
       setIsComplete(true);
       
       toast({
         title: "Sentiment analysis complete",
-        description: `Overall sentiment: ${getSentimentText(results.overall.average)}`,
+        description: `Overall sentiment: ${getSentimentText(mockResults.overall.average)}`,
       });
-    }, 2000);
+    }, 2000); // Simulate 2-second API call
   };
 
   const getSentimentText = (score: number) => {
@@ -243,13 +199,20 @@ const SentimentAnalysisStep = ({ labeledTopics, onStepComplete }: SentimentAnaly
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
-                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(1)}%)`}
+                          label={({ name, percent }) => {
+                            // Safely convert percent to number for toFixed
+                            const percentValue = typeof percent === 'number' ? percent : 0;
+                            return `${name} (${(percentValue * 100).toFixed(1)}%)`;
+                          }}
                         >
                           <Cell fill={COLORS[0]} />
                           <Cell fill={COLORS[1]} />
                           <Cell fill={COLORS[2]} />
                         </Pie>
-                        <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Percentage']} />
+                        <Tooltip formatter={(value) => {
+                          // Ensure value is a number before using toFixed
+                          return typeof value === 'number' ? [`${value.toFixed(1)}%`, 'Percentage'] : [value, 'Percentage'];
+                        }} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -302,7 +265,12 @@ const SentimentAnalysisStep = ({ labeledTopics, onStepComplete }: SentimentAnaly
                     <XAxis type="number" domain={[0, 100]} tickFormatter={(tick) => `${tick}%`} />
                     <YAxis dataKey="topicLabel" type="category" width={150} />
                     <Tooltip 
-                      formatter={(value, name) => [`${value.toFixed(1)}%`, name === 'positive' ? 'Positive' : name === 'neutral' ? 'Neutral' : 'Negative']}
+                      formatter={(value, name) => {
+                        // Ensure value is a number before using toFixed
+                        const formattedValue = typeof value === 'number' ? `${value.toFixed(1)}%` : value;
+                        const displayName = name === 'positive' ? 'Positive' : name === 'neutral' ? 'Neutral' : 'Negative';
+                        return [formattedValue, displayName];
+                      }}
                     />
                     <Legend />
                     <Bar dataKey="positive" name="Positive" stackId="a" fill={COLORS[0]} />
