@@ -1,9 +1,38 @@
-
 import { useState } from "react";
-import { Upload, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+
+const sampleReviews = [
+  { review: "This restaurant has amazing food!" },
+  { review: "Terrible experience. Waited for an hour." },
+  { review: "The product works as described." },
+  { review: "I love this app, it's easy to use." },
+  { review: "Not worth the price. Broke within a week." },
+];
 
 type FileUploadProps = {
   onFileUpload: (data: string) => void;
@@ -17,7 +46,29 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
+
     if (selectedFile) {
+      const isCSV = selectedFile.name.endsWith(".csv");
+      const isTooLarge = selectedFile.size > 5 * 1024 * 1024; // 5MB
+
+      if (!isCSV) {
+        toast({
+          title: "Invalid file format",
+          description: "Only CSV files are supported.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isTooLarge) {
+        toast({
+          title: "File too large",
+          description: "File size must be 5MB or less.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setFile(selectedFile);
       setIsUploaded(false);
     }
@@ -27,7 +78,7 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
     if (!file) {
       toast({
         title: "No file selected",
-        description: "Please select a file to upload",
+        description: "Please select a CSV file to upload",
         variant: "destructive",
       });
       return;
@@ -35,8 +86,12 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
 
     setIsUploading(true);
     try {
-      // Read the file as text
       const text = await file.text();
+
+      if (!text.toLowerCase().includes("review")) {
+        throw new Error("Missing 'review' field");
+      }
+
       onFileUpload(text);
       setIsUploaded(true);
       toast({
@@ -46,8 +101,8 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
     } catch (error) {
       console.error("Error reading file:", error);
       toast({
-        title: "Error uploading file",
-        description: "Please try again with a valid text file",
+        title: "Invalid file content",
+        description: "CSV file must contain a column named 'review'.",
         variant: "destructive",
       });
     } finally {
@@ -56,20 +111,8 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
   };
 
   const loadSampleData = () => {
-    const sampleReviews = `
-      This restaurant has amazing food! The service was excellent and I will definitely come back again.
-      Terrible experience. Waited for an hour and the food was cold when it arrived.
-      The product works as described. Good value for money, but shipping took longer than expected.
-      I love this app, it's intuitive and easy to use. Would recommend to anyone looking for productivity tools.
-      Average hotel, nothing special. The rooms were clean but outdated. Location was convenient.
-      The customer service was outstanding. They helped resolve my issue immediately.
-      Not worth the price. Broke within a week of purchase. Avoid this brand.
-      Great course content, but the platform is buggy and videos sometimes don't load properly.
-      Highly recommend this book! The author's writing style is engaging and the story is captivating.
-      This phone has excellent battery life but the camera quality could be better.
-    `;
-    
-    onFileUpload(sampleReviews);
+    const csvString = ["review", ...sampleReviews.map((r) => r.review)].join("\n");
+    onFileUpload(csvString);
     setIsUploaded(true);
     toast({
       title: "Sample data loaded",
@@ -87,7 +130,7 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
           <input
             type="file"
             id="file-upload"
-            accept=".txt,.csv,.json"
+            accept=".csv"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -101,10 +144,10 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
               <Upload className="h-12 w-12 text-gray-400 mb-2" />
             )}
             <span className="text-lg font-medium mb-1">
-              {file ? file.name : "Choose a file or drag & drop"}
+              {file ? file.name : "Choose a CSV file or drag & drop"}
             </span>
             <span className="text-sm text-gray-500">
-              Supported formats: TXT, CSV, JSON
+              Only CSV files up to 5MB are accepted. File must contain a <code>review</code> column.
             </span>
           </label>
           {file && !isUploaded && (
@@ -115,10 +158,53 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={loadSampleData}>
-          Use Sample Data
-        </Button>
+      <CardFooter className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+        <div className="flex gap-2 items-center">
+          <Button variant="outline" onClick={loadSampleData}>
+            Use Sample Data
+          </Button>
+          <Dialog>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" size="icon">
+                      <Eye className="h-5 w-5" />
+                      <span className="sr-only">Preview sample data</span>
+                    </Button>
+                  </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  Preview sample data
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sample Review Data</DialogTitle>
+                <DialogDescription>
+                  This is the sample CSV content shown in a table view.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="overflow-auto max-h-[300px] mt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Review</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sampleReviews.map((row, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{row.review}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
         <Button
           onClick={handleUpload}
           disabled={!file || isUploading || isUploaded}

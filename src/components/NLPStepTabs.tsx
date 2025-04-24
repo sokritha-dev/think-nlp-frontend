@@ -36,21 +36,26 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
       [step]: true,
     });
   };
-
   const handleCleanedData = (data: string[]) => {
     setCleanedData(data);
     completeStep("data-cleaning");
+    setActiveTab("data-exploration");
+  };
+
+  const handleEDA = () => {
+    completeStep("data-exploration");
+    setActiveTab("topic-modeling");
   };
 
   const handleTopics = (topics: { id: number; docs: string[] }[]) => {
     setTopics(topics);
-    completeStep("topic-modeling");
   };
 
   const handleLabeledTopics = (topics: { id: number; label: string; docs: string[] }[]) => {
     setLabeledTopics(topics);
-    completeStep("topic-labeling");
+
   };
+
 
   if (!reviewData) {
     return (
@@ -74,109 +79,118 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
           </CardHeader>
           <CardContent>
             <TabsList className="flex flex-col w-full h-auto gap-2">
-              <TabsTrigger 
-                value="data-cleaning" 
-                className="w-full justify-start text-left px-3 py-2 h-auto"
+              <TabsTrigger
+                value="data-cleaning"
+                className="w-full justify-between text-left px-3 py-2 h-auto flex items-center"
               >
-                1. Data Cleaning
+                <span className="truncate">1. Data Cleaning</span>
                 {stepsCompleted["data-cleaning"] && (
-                  <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
                     Complete
                   </Badge>
                 )}
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="data-exploration" 
-                className="w-full justify-start text-left px-3 py-2 h-auto"
+
+              <TabsTrigger
+                value="data-exploration"
+                className="w-full justify-between text-left px-3 py-2 h-auto flex items-center"
                 disabled={!stepsCompleted["data-cleaning"]}
               >
-                2. Data Exploration
+                <span className="truncate">2. Data Exploration</span>
                 {stepsCompleted["data-exploration"] && (
-                  <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
                     Complete
                   </Badge>
                 )}
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="topic-modeling" 
-                className="w-full justify-start text-left px-3 py-2 h-auto"
+
+              <TabsTrigger
+                value="topic-modeling"
+                className="w-full justify-between text-left px-3 py-2 h-auto flex items-center"
                 disabled={!stepsCompleted["data-exploration"]}
               >
-                3. Topic Modeling
+                <span className="truncate">3. Topic Modeling</span>
                 {stepsCompleted["topic-modeling"] && (
-                  <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
                     Complete
                   </Badge>
                 )}
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="topic-labeling" 
-                className="w-full justify-start text-left px-3 py-2 h-auto"
+
+              <TabsTrigger
+                value="topic-labeling"
+                className="w-full justify-between text-left px-3 py-2 h-auto flex items-center"
                 disabled={!stepsCompleted["topic-modeling"]}
               >
-                4. Topic Labeling
+                <span className="truncate">4. Topic Labeling</span>
                 {stepsCompleted["topic-labeling"] && (
-                  <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
                     Complete
                   </Badge>
                 )}
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="sentiment-analysis" 
-                className="w-full justify-start text-left px-3 py-2 h-auto"
+
+              <TabsTrigger
+                value="sentiment-analysis"
+                className="w-full justify-between text-left px-3 py-2 h-auto flex items-center"
                 disabled={!stepsCompleted["topic-labeling"]}
               >
-                5. Sentiment Analysis
+                <span className="truncate">5. Sentiment Analysis</span>
                 {stepsCompleted["sentiment-analysis"] && (
-                  <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
                     Complete
                   </Badge>
                 )}
               </TabsTrigger>
             </TabsList>
+
           </CardContent>
         </Card>
 
         <div className="md:w-4/5">
           <TabsContent value="data-cleaning" className="mt-0">
-            <DataCleaningStep 
-              rawData={reviewData} 
-              onComplete={handleCleanedData}
-              onStepComplete={() => completeStep("data-cleaning")}
+            <DataCleaningStep
+              rawData={reviewData}
+              onStepComplete={handleCleanedData}
             />
           </TabsContent>
-          
+
           <TabsContent value="data-exploration" className="mt-0">
-            <DataExplorationStep 
+            <DataExplorationStep
               cleanedData={cleanedData}
-              onStepComplete={() => completeStep("data-exploration")}
+              onStepComplete={handleEDA}
             />
           </TabsContent>
-          
+
           <TabsContent value="topic-modeling" className="mt-0">
-            <TopicModelingStep 
+            <TopicModelingStep
               cleanedData={cleanedData}
               onTopicsGenerated={handleTopics}
-              onStepComplete={() => completeStep("topic-modeling")}
+              onStepComplete={() => {
+                completeStep("topic-modeling");
+                setActiveTab("topic-labeling");
+              }}
             />
           </TabsContent>
-          
+
           <TabsContent value="topic-labeling" className="mt-0">
-            <TopicLabelingStep 
+            <TopicLabelingStep
               topics={topics}
               onTopicsLabeled={handleLabeledTopics}
-              onStepComplete={() => completeStep("topic-labeling")}
+              onStepComplete={() => {
+                completeStep("topic-labeling");
+                setActiveTab("sentiment-analysis");
+              }}
             />
           </TabsContent>
-          
+
           <TabsContent value="sentiment-analysis" className="mt-0">
-            <SentimentAnalysisStep 
+            <SentimentAnalysisStep
               labeledTopics={labeledTopics}
-              onStepComplete={() => completeStep("sentiment-analysis")}
+              onStepComplete={() => {
+                completeStep("sentiment-analysis");
+
+              }}
             />
           </TabsContent>
         </div>
