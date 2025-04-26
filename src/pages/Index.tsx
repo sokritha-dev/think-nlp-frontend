@@ -1,49 +1,34 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import FileUpload from "@/components/FileUpload";
 import NLPStepTabs from "@/components/NLPStepTabs";
 import { SentimentCharts } from "@/components/SentimentCharts";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react"; // spinner icon
-import { useNavigate } from "react-router-dom";
-
+import { Loader2 } from "lucide-react";
+import { useSampleSentiment } from "@/hooks/useSampleSentiment";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [reviewData, setReviewData] = useState<string | null>(null);
   const [showSteps, setShowSteps] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [sentimentResult, setSentimentResult] = useState<any | null>(null);
-  const navigate = useNavigate();
+  const [useSample, setUseSample] = useState(false);
+
+  const {
+    data: sentimentResult,
+    isLoading,
+    isError,
+  } = useSampleSentiment(useSample); // fetch only using sample data
+
 
   const handleFileUpload = async (data: string) => {
     setReviewData(data);
     setShowSteps(false);
-    setIsLoading(true);
-
-    // Simulate backend delay — replace with actual API call
-    setTimeout(() => {
-      const mockSentimentResult = {
-        overall: {
-          positive: 55,
-          neutral: 30,
-          negative: 15,
-          average: 0.4,
-        },
-        byTopic: [
-          { topicId: 1, topicLabel: "Room Cleanliness", positive: 72, neutral: 18, negative: 10, average: 0.6 },
-          { topicId: 2, topicLabel: "Staff Behavior", positive: 45, neutral: 35, negative: 20, average: 0.2 },
-          { topicId: 3, topicLabel: "Food Quality", positive: 35, neutral: 30, negative: 35, average: -0.1 },
-        ],
-      };
-      setSentimentResult(mockSentimentResult);
-      setIsLoading(false);
-    }, 1800);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-
       <main className="flex-1 container mx-auto py-10 px-4 max-w-6xl">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-nlp-blue mb-3">
@@ -55,7 +40,7 @@ const Index = () => {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-12">
-          <FileUpload onFileUpload={handleFileUpload} />
+          <FileUpload onFileUpload={handleFileUpload} setUseSample={setUseSample} />
         </div>
 
         {isLoading && (
@@ -65,7 +50,7 @@ const Index = () => {
           </div>
         )}
 
-        {reviewData && !isLoading && sentimentResult && !showSteps && (
+        {!isLoading && sentimentResult && !showSteps && (
           <div className="animate-fade-in space-y-10">
             <SentimentCharts sentimentResults={sentimentResult} />
             <div className="text-center mt-12">
@@ -84,7 +69,9 @@ const Index = () => {
           </div>
         )}
 
-        {reviewData && !isLoading && showSteps && <NLPStepTabs reviewData={reviewData} />}
+        {!isLoading && reviewData && showSteps && (
+          <NLPStepTabs reviewData={reviewData} />
+        )}
       </main>
 
       <footer className="bg-white border-t border-gray-200 py-4 mt-10">

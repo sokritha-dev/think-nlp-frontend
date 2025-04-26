@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { Upload, CheckCircle2, AlertCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,23 +25,20 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { useSampleData } from "@/hooks/useSampleSentiment";
 
-const sampleReviews = [
-  { review: "This restaurant has amazing food!" },
-  { review: "Terrible experience. Waited for an hour." },
-  { review: "The product works as described." },
-  { review: "I love this app, it's easy to use." },
-  { review: "Not worth the price. Broke within a week." },
-];
 
 type FileUploadProps = {
   onFileUpload: (data: string) => void;
+  setUseSample: Dispatch<SetStateAction<boolean>>;
 };
 
-const FileUpload = ({ onFileUpload }: FileUploadProps) => {
+const FileUpload = ({ onFileUpload, setUseSample }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploaded, setIsUploaded] = useState(false);
+  const [showSampleDialog, setShowSampleDialog] = useState(false);
+  const { data: sampleData = [], isFetching, refetch } = useSampleData();
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,16 +107,6 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
     }
   };
 
-  const loadSampleData = () => {
-    const csvString = ["review", ...sampleReviews.map((r) => r.review)].join("\n");
-    onFileUpload(csvString);
-    setIsUploaded(true);
-    toast({
-      title: "Sample data loaded",
-      description: "Sample review data is ready for processing",
-    });
-  };
-
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -160,55 +147,73 @@ const FileUpload = ({ onFileUpload }: FileUploadProps) => {
       </CardContent>
       <CardFooter className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
         <div className="flex gap-2 items-center">
-          <Button variant="outline" onClick={loadSampleData}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setUseSample(true);
+              toast({
+                title: "Sample data loaded",
+                description: "Sample review data is ready for processing",
+              });
+            }}
+          >
             Use Sample Data
           </Button>
-          <Dialog>
+          <Dialog open={showSampleDialog} onOpenChange={setShowSampleDialog}>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DialogTrigger asChild>
-                    <Button variant="secondary" size="icon">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={async () => {
+                        setShowSampleDialog(true);
+                        await refetch();
+                      }}
+                    >
                       <Eye className="h-5 w-5" />
                       <span className="sr-only">Preview sample data</span>
                     </Button>
                   </DialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="top">
-                  Preview sample data
-                </TooltipContent>
+                <TooltipContent side="top">Preview sample data</TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Sample Review Data</DialogTitle>
-                <DialogDescription>
-                  This is the sample CSV content shown in a table view.
-                </DialogDescription>
+                <DialogDescription>This is the sample CSV content shown in a table view.</DialogDescription>
               </DialogHeader>
               <div className="overflow-auto max-h-[300px] mt-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Review</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sampleReviews.map((row, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{row.review}</TableCell>
+                {isFetching ? (
+                  <p className="text-sm text-muted-foreground">Loading sample data...</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {sampleData[0] &&
+                          Object.keys(sampleData[0]).map((key) => (
+                            <TableHead key={key}>{key}</TableHead>
+                          ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {sampleData.slice(0, 5).map((row, index) => (
+                        <TableRow key={index}>
+                          {Object.values(row).map((value, i) => (
+                            <TableCell key={i}>{value}</TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </DialogContent>
           </Dialog>
         </div>
-        <Button
-          onClick={handleUpload}
-          disabled={!file || isUploading || isUploaded}
-        >
+        <Button onClick={handleUpload} disabled={!file || isUploading || isUploaded}>
           {isUploading ? "Uploading..." : "Upload"}
         </Button>
       </CardFooter>
