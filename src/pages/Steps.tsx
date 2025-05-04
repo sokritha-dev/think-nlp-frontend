@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 const StepsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [reviewData, setReviewData] = useState<string | null>(null);
+  const [fileId, setFileId] = useState<string | null>(null);
 
   useEffect(() => {
-    const state = location.state as { reviewData?: string };
-    if (state?.reviewData) {
-      setReviewData(state.reviewData);
+    const state = location.state as { fileId?: string };
+    if (state?.fileId) {
+      setFileId(state.fileId);
     } else {
       navigate("/", { replace: true }); // if no data, redirect home
     }
@@ -26,12 +26,12 @@ const StepsPage = () => {
         <div className="mb-6">
           <Button
             variant="outline"
-            onClick={() => navigate("/", { state: { reviewData } })}
+            onClick={() => navigate("/", { state: { fileId } })}
           >
             ← Back to Results
           </Button>
         </div>
-        {reviewData && <NLPStepTabs reviewData={reviewData} />}
+        {fileId && <NLPStepTabs fileId={fileId} />}
       </main>
     </div>
   );

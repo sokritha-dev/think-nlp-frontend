@@ -1,8 +1,13 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import DataCleaningStep from "./steps/DataCleaningStep";
@@ -12,14 +17,16 @@ import TopicLabelingStep from "./steps/TopicLabelingStep";
 import SentimentAnalysisStep from "./steps/SentimentAnalysisStep";
 
 type NLPStepTabsProps = {
-  reviewData: string | null;
+  fileId: string | null;
 };
 
-const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
+const NLPStepTabs = ({ fileId }: NLPStepTabsProps) => {
   const [activeTab, setActiveTab] = useState("data-cleaning");
   const [cleanedData, setCleanedData] = useState<string[]>([]);
   const [topics, setTopics] = useState<{ id: number; docs: string[] }[]>([]);
-  const [labeledTopics, setLabeledTopics] = useState<{ id: number; label: string; docs: string[] }[]>([]);
+  const [labeledTopics, setLabeledTopics] = useState<
+    { id: number; label: string; docs: string[] }[]
+  >([]);
 
   // Handle step completion to enable next steps
   const [stepsCompleted, setStepsCompleted] = useState({
@@ -36,8 +43,8 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
       [step]: true,
     });
   };
-  const handleCleanedData = (data: string[]) => {
-    setCleanedData(data);
+
+  const handleCleanedData = () => {
     completeStep("data-cleaning");
     setActiveTab("data-exploration");
   };
@@ -51,13 +58,13 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
     setTopics(topics);
   };
 
-  const handleLabeledTopics = (topics: { id: number; label: string; docs: string[] }[]) => {
+  const handleLabeledTopics = (
+    topics: { id: number; label: string; docs: string[] }[]
+  ) => {
     setLabeledTopics(topics);
-
   };
 
-
-  if (!reviewData) {
+  if (!fileId) {
     return (
       <Alert>
         <AlertCircle className="h-4 w-4" />
@@ -85,7 +92,10 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
               >
                 <span className="truncate">1. Data Cleaning</span>
                 {stepsCompleted["data-cleaning"] && (
-                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-green-50 text-green-700 border-green-200"
+                  >
                     Complete
                   </Badge>
                 )}
@@ -98,7 +108,10 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
               >
                 <span className="truncate">2. Data Exploration</span>
                 {stepsCompleted["data-exploration"] && (
-                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-green-50 text-green-700 border-green-200"
+                  >
                     Complete
                   </Badge>
                 )}
@@ -111,7 +124,10 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
               >
                 <span className="truncate">3. Topic Modeling</span>
                 {stepsCompleted["topic-modeling"] && (
-                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-green-50 text-green-700 border-green-200"
+                  >
                     Complete
                   </Badge>
                 )}
@@ -124,7 +140,10 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
               >
                 <span className="truncate">4. Topic Labeling</span>
                 {stepsCompleted["topic-labeling"] && (
-                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-green-50 text-green-700 border-green-200"
+                  >
                     Complete
                   </Badge>
                 )}
@@ -137,20 +156,22 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
               >
                 <span className="truncate">5. Sentiment Analysis</span>
                 {stepsCompleted["sentiment-analysis"] && (
-                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-green-50 text-green-700 border-green-200"
+                  >
                     Complete
                   </Badge>
                 )}
               </TabsTrigger>
             </TabsList>
-
           </CardContent>
         </Card>
 
         <div className="md:w-4/5">
           <TabsContent value="data-cleaning" className="mt-0">
             <DataCleaningStep
-              rawData={reviewData}
+              fileId={fileId}
               onStepComplete={handleCleanedData}
             />
           </TabsContent>
@@ -189,7 +210,6 @@ const NLPStepTabs = ({ reviewData }: NLPStepTabsProps) => {
               labeledTopics={labeledTopics}
               onStepComplete={() => {
                 completeStep("sentiment-analysis");
-
               }}
             />
           </TabsContent>
