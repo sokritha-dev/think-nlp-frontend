@@ -9,4 +9,7 @@ export const ENDPOINTS = {
   UPLOAD_DATA: `${API_BASE_URL}/api/upload`,
   NORMALIZATION: `${API_BASE_URL}/api/clean/normalize`,
   SPECIAL_REMOVAL: `${API_BASE_URL}/api/clean/remove-special`,
+  TOKENIZE: `${API_BASE_URL}/api/clean/tokenize`,
+  STOPWORD_REMOVAL: `${API_BASE_URL}/api/clean/remove-stopwords`,
+  LEMMATIZE: `${API_BASE_URL}/api/clean/lemmatize`,
 };

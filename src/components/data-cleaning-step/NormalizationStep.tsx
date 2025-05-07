@@ -4,7 +4,14 @@ import { highlightDiff } from "@/components/TextDiffHighlight";
 import { useNormalizedReviews } from "@/hooks/useNormalization";
 import { CleaningBadgeSection } from "@/components/data-cleaning-step/CleaningBadgeSection";
 import React from "react";
-import BeforeAfterTextLoader from "@/components/loaders/BeforeAterTextLoader";
+import BeforeAfterTextLoader from "@/components/loaders/BeforeAfterTextLoader";
+import { Download } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useDownloadToast } from "@/hooks/useDownloadToast";
 
 interface Badges {
   label: string;
@@ -23,11 +30,9 @@ export default function NormalizationStep({
   const pageSize = 20;
   const [page, setPage] = useState(1);
   const [inputMap, setInputMap] = useState("");
-  const { data, isLoading, isApplying, applyBrokenMap } = useNormalizedReviews(
-    fileId,
-    page,
-    pageSize
-  );
+  const { data, isLoading, isApplying, applyBrokenMap } =
+    useNormalizedReviews(fileId, page, pageSize);
+  const { downloadFile } = useDownloadToast();
 
   useEffect(() => {
     if (data?.broken_words) {
@@ -75,14 +80,34 @@ export default function NormalizationStep({
           value={inputMap}
           onChange={(e) => setInputMap(e.target.value)}
         />
-        <Button
-          size="sm"
-          className="text-xs w-full"
-          onClick={handleApply}
-          disabled={isApplying}
-        >
-          {isApplying ? "Applying..." : "Apply Changes"}
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            className="text-xs w-full flex-1"
+            onClick={handleApply}
+            disabled={isApplying}
+          >
+            {isApplying ? "Applying..." : "Apply Changes"}
+          </Button>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() =>
+                  downloadFile(data.normalized_s3_url, {
+                    filename: "normalized_reviews.csv",
+                    mimeType: "text/csv;charset=utf-8;",
+                  })
+                }
+              >
+                <Download className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download as CSV</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       {/* =============== Input & Output Text ================ */}

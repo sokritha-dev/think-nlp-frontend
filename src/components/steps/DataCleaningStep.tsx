@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import NormalizationStep from "@/components/data-cleaning-step/NormalizationStep";
 import { DataCleaningDefinition } from "@/components/data-cleaning-step/DataCleaningDefinition";
 import SpecialCharRemovalStep from "@/components/data-cleaning-step/SpecialCharsRemoveStep";
+import TokenizationStep from "@/components/data-cleaning-step/TokenizationStep";
+import StopwordRemovalStep from "@/components/data-cleaning-step/StopwordRemovalStep";
+import LemmatizationStep from "@/components/data-cleaning-step/LemmatizationStep";
 
 const CLEANING_STEPS = [
   {
@@ -35,6 +38,41 @@ const CLEANING_STEPS = [
       { label: "Special Chars", tip: "Remove punctuation, etc." },
     ],
     component: SpecialCharRemovalStep,
+  },
+  {
+    name: "Tokenized",
+    icon: "🔠",
+    description: "Split the text into individual words or tokens.",
+    badges: [
+      { label: "Whitespace Split", tip: "Split sentences by spaces." },
+      { label: "Lowercase Tokens", tip: "Tokens are made lowercase." },
+      {
+        label: "Punctuation Removed",
+        tip: "Punctuation is dropped from tokens.",
+      },
+    ],
+    component: TokenizationStep,
+  },
+  {
+    name: "Stopwords Removed",
+    icon: "🚫",
+    badges: [{ label: "NLTK", tip: "Remove stopwords in English language." }],
+    description:
+      "Removed common words like 'the', 'is', etc, occur very frequently and don't carry much semantic meaning. This process help to reduce the size of data, improve the efficiency of algorithms and enhance the accuracy of text analysis tasks.",
+    component: StopwordRemovalStep,
+  },
+  {
+    name: "Lemmatized",
+    icon: "🔁",
+    badges: [
+      {
+        label: "WordNetLemmatizer - NLTK",
+        tip: "Convert the word into a root form",
+      },
+    ],
+    description:
+      "Converted words to their base form. E.g: Improvement, Improving, Improved => Improve",
+    component: LemmatizationStep,
   },
 ];
 

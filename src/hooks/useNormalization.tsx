@@ -57,22 +57,9 @@ export const useNormalizedReviews = (
     },
   });
 
-  const downloadCSV = async (url: string) => {
-    if (!url) return;
-    const response = await axios.get(url, { responseType: "blob" });
-    const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", "normalized_reviews.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return {
     ...query,
     applyBrokenMap: mutation.mutateAsync,
     isApplying: mutation.isPending,
-    downloadCSV,
   };
 };

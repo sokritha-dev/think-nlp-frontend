@@ -9,6 +9,11 @@ export type SpecialRemovalResult = {
   total: number;
   cleaned_s3_url: string;
   removed_characters: string[];
+  flags: {
+    remove_special: boolean;
+    remove_numbers: boolean;
+    remove_emoji: boolean;
+  };
 };
 
 export type SpecialRemovalConfig = {
@@ -21,7 +26,7 @@ export type SpecialRemovalConfig = {
 export const useSpecialRemovalReviews = (
   fileId: string,
   page: number = 1,
-  pageSize: number = 20,
+  pageSize: number = 20
 ) => {
   const query = useQuery<SpecialRemovalResult>({
     queryKey: ["special-clean", fileId, page, pageSize],
@@ -36,6 +41,7 @@ export const useSpecialRemovalReviews = (
         cleaned_s3_url: res.data.data.cleaned_s3_url,
         removed_characters: res.data.data.removed_characters,
         total: res.data.data.total_records,
+        flags: res.data.data.flags,
       };
     },
     enabled: !!fileId,
@@ -50,6 +56,7 @@ export const useSpecialRemovalReviews = (
         cleaned_s3_url: res.data.data.cleaned_s3_url,
         removed_characters: res.data.data.removed_characters,
         total: res.data.data.total_records,
+        flags: res.data.data.flags,
       };
     },
     onSuccess: () => {
@@ -57,22 +64,9 @@ export const useSpecialRemovalReviews = (
     },
   });
 
-  const downloadCSV = async (url: string) => {
-    if (!url) return;
-    const response = await axios.get(url, { responseType: "blob" });
-    const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", "special_cleaned_reviews.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return {
     ...query,
     applySpecialClean: mutation.mutateAsync,
     isApplying: mutation.isPending,
-    downloadCSV,
   };
 };
