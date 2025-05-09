@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export const CleaningBadgeSection = ({
+export const TechniqueBadgeSection = ({
   title,
   badges,
 }: {
@@ -26,7 +26,18 @@ export const CleaningBadgeSection = ({
                 </Badge>
               </span>
             </TooltipTrigger>
-            <TooltipContent>{b.tip}</TooltipContent>
+            <TooltipContent
+              className="max-w-xs p-4 bg-white border text-sm leading-relaxed shadow-lg rounded-md"
+              side="top"
+              align="center"
+            >
+              <span className="font-semibold text-nlp-blue block mb-1">
+                {b.label}
+              </span>
+              <p className="text-muted-foreground whitespace-pre-line">
+                {b.tip}
+              </p>
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       ))}

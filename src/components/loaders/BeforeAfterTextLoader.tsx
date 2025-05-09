@@ -1,10 +1,14 @@
 import React from "react";
 import "@/styles/shimmer.css"; // Import shimmer styles
 
-export default function SkeletonLoader() {
+export default function SkeletonLoader({
+  numberLoader = 2,
+}: {
+  numberLoader?: number;
+}) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 rounded-xl p-5 h-80 overflow-y-auto border border-border shadow-sm animate-fade-in">
-      {[...Array(2)].map((_, colIdx) => (
+    <div className={`grid grid-cols-1 md:grid-cols-${numberLoader} gap-6 bg-muted/20 rounded-xl p-5 h-80 overflow-y-auto border border-border shadow-sm animate-fade-in`}>
+      {[...Array(numberLoader)].map((_, colIdx) => (
         <div key={colIdx}>
           <div className="h-4 w-24 bg-muted rounded mb-3 shimmer" />
           <div className="space-y-2">

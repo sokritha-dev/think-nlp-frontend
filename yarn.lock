@@ -2251,6 +2251,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/pako@npm:^2":
+  version: 2.0.3
+  resolution: "@types/pako@npm:2.0.3"
+  checksum: 10c0/45119ac3c4e8a77317c35493327039b74e333562f06ce038048228918d8ddfaa7958125aab960d1565b3861046022754c414dba1eecb210c44a32c415956bee2
+  languageName: node
+  linkType: hard
+
 "@types/papaparse@npm:^5.3.15":
   version: 5.3.15
   resolution: "@types/papaparse@npm:5.3.15"
@@ -4452,6 +4459,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pako@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "pako@npm:2.1.0"
+  checksum: 10c0/8e8646581410654b50eb22a5dfd71159cae98145bd5086c9a7a816ec0370b5f72b4648d08674624b3870a521e6a3daffd6c2f7bc00fdefc7063c9d8232ff5116
+  languageName: node
+  linkType: hard
+
 "papaparse@npm:^5.5.2":
   version: 5.5.2
   resolution: "papaparse@npm:5.5.2"
@@ -5596,6 +5610,7 @@ __metadata:
     "@tanstack/react-query": "npm:^5.56.2"
     "@types/diff": "npm:^7.0.2"
     "@types/node": "npm:^22.5.5"
+    "@types/pako": "npm:^2"
     "@types/papaparse": "npm:^5.3.15"
     "@types/react": "npm:^18.3.3"
     "@types/react-dom": "npm:^18.3.0"
@@ -5617,6 +5632,7 @@ __metadata:
     lovable-tagger: "npm:^1.1.7"
     lucide-react: "npm:^0.462.0"
     next-themes: "npm:^0.3.0"
+    pako: "npm:^2.1.0"
     papaparse: "npm:^5.5.2"
     postcss: "npm:^8.4.47"
     react: "npm:^18.3.1"

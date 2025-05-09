@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CleaningBadgeSection } from "@/components/data-cleaning-step/CleaningBadgeSection";
 import React from "react";
 import BeforeAfterTextLoader from "@/components/loaders/BeforeAfterTextLoader";
 import {
@@ -8,9 +7,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Download } from "lucide-react";
+import { CheckCircle2, Download, Loader2, XCircle } from "lucide-react";
 import { useTokenizedReviews } from "@/hooks/useTokenization";
-import { useDownloadToast } from "@/hooks/useDownloadToast";
+import { useCompressedCSV } from "@/hooks/useDownloadPreviewCSV";
+import { useToast } from "@/hooks/use-toast";
+import { TechniqueBadgeSection } from "@/components/data-cleaning-step/TechniqueBadgeSection";
 
 interface BadgeItem {
   label: string;
@@ -28,17 +29,73 @@ export default function TokenizationStep({
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
+  const { toast } = useToast();
 
-  const { data, isLoading, regenerate, isRegenerating } =
-    useTokenizedReviews(fileId, page, pageSize);
-  const { downloadFile } = useDownloadToast();
+  const { data, isLoading, regenerate, isRegenerating } = useTokenizedReviews(
+    fileId,
+    page,
+    pageSize
+  );
+
+  const { downloadDecompressed, isLoading: isDownloading } = useCompressedCSV(
+    data ? data.tokenized_s3_url : "",
+    {
+      enabled: false,
+      filename: "tokenized_reviews.csv",
+    }
+  );
 
   if (isLoading || !data) {
     return <BeforeAfterTextLoader />;
   }
 
-  const { before, after, total, should_recompute, tokenized_s3_url } = data;
+  const { before, after, total, should_recompute } = data;
   const totalPages = Math.ceil(total / pageSize);
+
+  const handleRegenerate = async () => {
+    const { dismiss } = toast({
+      title: "Regenerating tokenization...",
+      description: (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Please wait while we recompute the tokens.</span>
+        </div>
+      ),
+      open: true,
+    });
+
+    try {
+      await regenerate();
+      dismiss();
+
+      toast({
+        title: "Tokenization updated",
+        description: (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>New tokens successfully generated!</span>
+          </div>
+        ),
+        duration: 4000,
+      });
+    } catch (err: any) {
+      console.error("❌ Tokenization failed:", err);
+      dismiss();
+      toast({
+        title: "Tokenization failed",
+        description: (
+          <div className="flex items-center gap-2 text-red-600">
+            <XCircle className="h-4 w-4" />
+            <span>
+              {err?.message || "Something went wrong while recomputing."}
+            </span>
+          </div>
+        ),
+        variant: "destructive",
+        duration: 4000,
+      });
+    }
+  };
 
   return (
     <React.Fragment>
@@ -48,11 +105,10 @@ export default function TokenizationStep({
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
 
       {badges.length > 0 && (
-        <CleaningBadgeSection title="Techniques used:" badges={badges} />
+        <TechniqueBadgeSection title="Techniques used:" badges={badges} />
       )}
 
-      {/* Recompute button if needed */}
-
+      {/* =============== Parameters ================ */}
       <div className="mb-4 space-y-2">
         {should_recompute && (
           <div className="text-sm text-yellow-600 bg-yellow-50 border border-yellow-300 p-3 rounded-md">
@@ -60,6 +116,7 @@ export default function TokenizationStep({
             tokenization to reflect the latest cleaned data.
           </div>
         )}
+
         <div
           className={`flex ${
             should_recompute ? "justify-between gap-1" : "justify-end"
@@ -69,36 +126,30 @@ export default function TokenizationStep({
             <Button
               size="sm"
               className="text-xs w-full"
-              onClick={() => regenerate()}
               disabled={isRegenerating}
+              onClick={handleRegenerate}
             >
               {isRegenerating ? "Regenerating..." : "Recompute Tokenization"}
             </Button>
           )}
 
-          <div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() =>
-                    downloadFile(tokenized_s3_url, {
-                      filename: "tokenized_reviews.csv",
-                      mimeType: "text/csv;charset=utf-8;",
-                    })
-                  }
-                >
-                  <Download className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Download as CSV</TooltipContent>
-            </Tooltip>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={downloadDecompressed}
+                disabled={isDownloading}
+              >
+                <Download className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download as CSV</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
-      {/* Token display */}
+      {/* =============== Input & Output Text ================ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 rounded-xl p-5 h-80 overflow-y-auto border border-border shadow-sm">
         <div>
           <h4 className="text-sm font-medium text-muted-foreground">
@@ -118,19 +169,23 @@ export default function TokenizationStep({
         <div>
           <h4 className="text-sm font-medium text-nlp-blue">Tokens</h4>
           <div className="space-y-1">
-            {after.map((tokens: string[], i: number) => (
-              <div
-                key={i}
-                className="text-sm bg-white p-2 border border-solid rounded"
-              >
-                {tokens.join(" | ")}
-              </div>
-            ))}
+            {isRegenerating ? (
+              <BeforeAfterTextLoader numberLoader={1} />
+            ) : (
+              after.map((tokens: string[], i: number) => (
+                <div
+                  key={i}
+                  className="text-sm bg-white p-2 border border-solid rounded"
+                >
+                  {tokens.join(" | ")}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* =============== Pagination ================ */}
       <div className="w-full flex justify-between items-center mt-4">
         <Button
           size="sm"

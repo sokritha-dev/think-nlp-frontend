@@ -19,36 +19,62 @@ const CLEANING_STEPS = [
     name: "Normalized",
     icon: "🧼",
     description:
-      "Fixed broken words, trimmed spaces, and made everything lowercase.",
+      "Standardized the text by fixing broken words, trimming extra spaces, and converting everything to lowercase.",
     badges: [
-      { label: "Unicode NFKC", tip: "Normalize special characters." },
-      { label: "Contractions", tip: "Expand shortened words." },
-      { label: "Whitespace", tip: "Trim and condense spaces." },
-      { label: "Lowercase", tip: "Convert all to lowercase." },
+      {
+        label: "Unicode NFKC",
+        tip: "Standardizes visually similar characters (like full-width 'Ａ' to normal 'A') and combines characters (like 'e' + accent to 'é') into a consistent format for easier processing.",
+      },
+
+      {
+        label: "Contractions",
+        tip: "Expands shortened words like “don’t” to “do not” to preserve meaning in analysis.",
+      },
+      {
+        label: "Whitespace",
+        tip: "Removes unnecessary spaces and ensures consistent spacing between words.",
+      },
+      {
+        label: "Lowercase",
+        tip: "Converts all characters to lowercase to reduce duplicate tokens like 'Apple' and 'apple'.",
+      },
     ],
     component: NormalizationStep,
   },
   {
     name: "Special Chars Removed",
     icon: "✂️",
-    description: "Removed emojis, numbers, and symbols.",
+    description:
+      "Cleaned the text by removing emojis, numbers, and special symbols that don’t contribute to core meaning.",
     badges: [
-      { label: "Emoji", tip: "Remove emojis." },
-      { label: "Numbers", tip: "Remove digits." },
-      { label: "Special Chars", tip: "Remove punctuation, etc." },
+      {
+        label: "Emoji",
+        tip: "Removes emojis to keep the text focused on meaningful words.",
+      },
+      {
+        label: "Numbers",
+        tip: "Removes numerical digits unless they're important for context (e.g., dates, prices).",
+      },
+      {
+        label: "Special Chars",
+        tip: "Eliminates punctuation and symbols like %, $, &, which are often considered noise.",
+      },
     ],
     component: SpecialCharRemovalStep,
   },
   {
     name: "Tokenized",
     icon: "🔠",
-    description: "Split the text into individual words or tokens.",
+    description:
+      "Split the text into individual words or tokens for further analysis.",
     badges: [
-      { label: "Whitespace Split", tip: "Split sentences by spaces." },
-      { label: "Lowercase Tokens", tip: "Tokens are made lowercase." },
+      {
+        label: "Whitespace Split",
+        tip: "Divides text into words based on spaces. For example, 'I love NLP' becomes ['I', 'love', 'NLP'].",
+      },
       {
         label: "Punctuation Removed",
-        tip: "Punctuation is dropped from tokens.",
+        tip: "Strips punctuation marks from tokens like commas and periods.",
       },
     ],
     component: TokenizationStep,
@@ -56,22 +82,27 @@ const CLEANING_STEPS = [
   {
     name: "Stopwords Removed",
     icon: "🚫",
-    badges: [{ label: "NLTK", tip: "Remove stopwords in English language." }],
     description:
-      "Removed common words like 'the', 'is', etc, occur very frequently and don't carry much semantic meaning. This process help to reduce the size of data, improve the efficiency of algorithms and enhance the accuracy of text analysis tasks.",
+      "Removed very common words like 'the', 'is', and 'in' that usually add little meaning to analysis.",
+    badges: [
+      {
+        label: "NLTK",
+        tip: "Uses the NLTK stopword list to remove frequently occurring English words that do not contribute much meaning.",
+      },
+    ],
     component: StopwordRemovalStep,
   },
   {
     name: "Lemmatized",
     icon: "🔁",
+    description:
+      "Converted words to their root forms. For example, 'improving', 'improved', and 'improvement' all become 'improve'.",
     badges: [
       {
         label: "WordNetLemmatizer - NLTK",
-        tip: "Convert the word into a root form",
+        tip: "Uses NLTK’s WordNet to find the base form of each word (lemma), improving consistency across word variations.",
       },
     ],
-    description:
-      "Converted words to their base form. E.g: Improvement, Improving, Improved => Improve",
     component: LemmatizationStep,
   },
 ];

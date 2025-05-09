@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CleaningBadgeSection } from "@/components/data-cleaning-step/CleaningBadgeSection";
 import React from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Download } from "lucide-react";
+import { CheckCircle2, Download, Loader2, XCircle } from "lucide-react";
 import { useStopwordRemoval } from "@/hooks/useStopwordRemoval";
 import BeforeAfterTextLoader from "@/components/loaders/BeforeAfterTextLoader";
 import { useToast } from "@/components/ui/use-toast";
-import { useDownloadToast } from "@/hooks/useDownloadToast";
+import { useCompressedCSV } from "@/hooks/useDownloadPreviewCSV";
+import { TechniqueBadgeSection } from "@/components/data-cleaning-step/TechniqueBadgeSection";
 
 interface BadgeItem {
   label: string;
@@ -34,60 +34,87 @@ export default function StopwordRemovalStep({
   const [customStopwords, setCustomStopwords] = useState("");
   const [excludeStopwords, setExcludeStopwords] = useState("");
 
-  const generateConfigs = (
-    customStopwords: string,
-    excludeStopwords: string
-  ) => {
-    const customStopwordList = customStopwords.split(",").map((s) => s.trim());
-    const excludeStopwordList = excludeStopwords
-      .split(",")
-      .map((s) => s.trim());
-
+  const stopwordConfigs = useMemo(() => {
     return {
-      custom_stopwords: customStopwordList,
-      exclude_stopwords: excludeStopwordList,
+      custom_stopwords: customStopwords
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      exclude_stopwords: excludeStopwords
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     };
-  };
-
-  const stopwordConfigs = useMemo(
-    () => generateConfigs(customStopwords, excludeStopwords),
-    [customStopwords, excludeStopwords]
-  );
+  }, [customStopwords, excludeStopwords]);
 
   const { data, isLoading, applyStopwordRemoval, isApplying } =
     useStopwordRemoval(fileId, page, pageSize, stopwordConfigs);
-  const { downloadFile } = useDownloadToast();
+
+  const { downloadDecompressed, isLoading: isDownloading } = useCompressedCSV(
+    data?.stopword_s3_url || "",
+    {
+      enabled: false,
+      filename: "stopword_removal_reviews.csv",
+    }
+  );
 
   useEffect(() => {
     if (data?.config) {
-      const customStopwordString = config.custom_stopwords.toString();
-      const excludeStopwordString = config.exclude_stopwords.toString();
-
-      setCustomStopwords(customStopwordString);
-      setExcludeStopwords(excludeStopwordString);
+      if (data.config.custom_stopwords) {
+        setCustomStopwords(data.config.custom_stopwords.join(", "));
+      }
+      if (data.config.exclude_stopwords) {
+        setExcludeStopwords(data.config.exclude_stopwords.join(", "));
+      }
     }
   }, [data?.config]);
 
   if (isLoading || !data) return <BeforeAfterTextLoader />;
 
-  const { before, after, total, should_recompute, stopword_s3_url, config } =
-    data;
-
+  const { before, after, total, should_recompute } = data;
   const totalPages = Math.ceil(total / pageSize);
 
   const handleApply = async () => {
+    const { dismiss } = toast({
+      title: "Applying stopword removal...",
+      description: (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Updating token list by removing stopwords...</span>
+        </div>
+      ),
+      open: true,
+    });
+
     try {
       await applyStopwordRemoval();
+      dismiss();
+
       toast({
-        title: "Stopword Removal Applied",
-        description:
-          "The stopwords were successfully removed from your tokens.",
+        title: "Stopword removal applied successfully",
+        description: (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Token data updated with the selected stopword config.</span>
+          </div>
+        ),
+        duration: 4000,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("❌ Stopword removal failed:", error);
+      dismiss();
       toast({
-        title: "Stopword Removal Error",
-        description: `There is an issue during removal stopword: ${error}`,
+        title: "Failed to remove stopwords",
+        description: (
+          <div className="flex items-center gap-2 text-red-600">
+            <XCircle className="h-4 w-4" />
+            <span>
+              {error?.message || "Something went wrong during processing."}
+            </span>
+          </div>
+        ),
         variant: "destructive",
+        duration: 4000,
       });
     }
   };
@@ -100,10 +127,10 @@ export default function StopwordRemovalStep({
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
 
       {badges.length > 0 && (
-        <CleaningBadgeSection title="Techniques used:" badges={badges} />
+        <TechniqueBadgeSection title="Techniques used:" badges={badges} />
       )}
 
-      {/* Warning and Actions */}
+      {/* Parameters */}
       <div className="mb-4 space-y-2">
         {should_recompute && (
           <div className="text-sm text-yellow-600 bg-yellow-50 border border-yellow-300 p-3 rounded-md">
@@ -112,7 +139,7 @@ export default function StopwordRemovalStep({
           </div>
         )}
 
-        <div className="flex flex-col gap-2 ">
+        <div className="flex flex-col gap-2">
           <div className="w-full">
             <label className="text-xs text-muted-foreground font-medium block mb-1">
               Custom Stopwords (comma-separated)
@@ -166,12 +193,8 @@ export default function StopwordRemovalStep({
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() =>
-                  downloadFile(stopword_s3_url, {
-                    filename: "stopword_removal_reviews.csv",
-                    mimeType: "text/csv;charset=utf-8;",
-                  })
-                }
+                onClick={downloadDecompressed}
+                disabled={isDownloading}
               >
                 <Download className="h-5 w-5" />
               </Button>
@@ -181,7 +204,7 @@ export default function StopwordRemovalStep({
         </div>
       </div>
 
-      {/* Before / After Display */}
+      {/* Output Display */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 rounded-xl p-5 h-80 overflow-y-auto border border-border shadow-sm">
         <div>
           <h4 className="text-sm font-medium text-muted-foreground">Before</h4>
@@ -201,14 +224,18 @@ export default function StopwordRemovalStep({
             Stopwords Removed
           </h4>
           <div className="space-y-1">
-            {after.map((tokens: string[], i: number) => (
-              <div
-                key={i}
-                className="text-sm bg-white p-2 border border-solid rounded"
-              >
-                {tokens.join(" | ")}
-              </div>
-            ))}
+            {isApplying ? (
+              <BeforeAfterTextLoader numberLoader={1} />
+            ) : (
+              after.map((tokens: string[], i: number) => (
+                <div
+                  key={i}
+                  className="text-sm bg-white p-2 border border-solid rounded"
+                >
+                  {tokens.join(" | ")}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

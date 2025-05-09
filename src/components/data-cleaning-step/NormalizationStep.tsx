@@ -2,16 +2,17 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { highlightDiff } from "@/components/TextDiffHighlight";
 import { useNormalizedReviews } from "@/hooks/useNormalization";
-import { CleaningBadgeSection } from "@/components/data-cleaning-step/CleaningBadgeSection";
 import React from "react";
 import BeforeAfterTextLoader from "@/components/loaders/BeforeAfterTextLoader";
-import { Download } from "lucide-react";
+import { CheckCircle2, Download, Loader2, XCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useDownloadToast } from "@/hooks/useDownloadToast";
+import { useCompressedCSV } from "@/hooks/useDownloadPreviewCSV";
+import { useToast } from "@/hooks/use-toast";
+import { TechniqueBadgeSection } from "@/components/data-cleaning-step/TechniqueBadgeSection";
 
 interface Badges {
   label: string;
@@ -30,9 +31,19 @@ export default function NormalizationStep({
   const pageSize = 20;
   const [page, setPage] = useState(1);
   const [inputMap, setInputMap] = useState("");
-  const { data, isLoading, isApplying, applyBrokenMap } =
-    useNormalizedReviews(fileId, page, pageSize);
-  const { downloadFile } = useDownloadToast();
+  const { toast } = useToast();
+  const { data, isLoading, isApplying, applyBrokenMap } = useNormalizedReviews(
+    fileId,
+    page,
+    pageSize
+  );
+  const { downloadDecompressed, isLoading: isDownloading } = useCompressedCSV(
+    data ? data.normalized_s3_url : "",
+    {
+      enabled: false,
+      filename: "normalized_reviews.csv",
+    }
+  );
 
   useEffect(() => {
     if (data?.broken_words) {
@@ -56,7 +67,46 @@ export default function NormalizationStep({
       const [k, v] = pair.split("=").map((s) => s.trim());
       if (k && v) map[k] = v;
     });
-    await applyBrokenMap(map);
+
+    const { dismiss } = toast({
+      title: "Please wait while we update the normalization.",
+      description: (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Applying changes...</span>
+        </div>
+      ),
+      open: true,
+    });
+
+    try {
+      await applyBrokenMap(map);
+      dismiss(); // close the loading toast
+
+      toast({
+        title: "Normalization has been updated.",
+        description: (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Broken map applied successfully</span>
+          </div>
+        ),
+        duration: 4000,
+      });
+    } catch (err: any) {
+      dismiss();
+      toast({
+        title: err?.message || "Something went wrong.",
+        description: (
+          <div className="flex items-center gap-2 text-red-600">
+            <XCircle className="h-4 w-4" />
+            <span>Failed to apply changes</span>
+          </div>
+        ),
+        variant: "destructive",
+        duration: 4000,
+      });
+    }
   };
 
   return (
@@ -67,7 +117,7 @@ export default function NormalizationStep({
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
 
       {badges.length > 0 && (
-        <CleaningBadgeSection title="Techniques used:" badges={badges} />
+        <TechniqueBadgeSection title="Techniques used:" badges={badges} />
       )}
 
       {/* =============== Parameters ================ */}
@@ -95,12 +145,8 @@ export default function NormalizationStep({
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() =>
-                  downloadFile(data.normalized_s3_url, {
-                    filename: "normalized_reviews.csv",
-                    mimeType: "text/csv;charset=utf-8;",
-                  })
-                }
+                onClick={downloadDecompressed}
+                disabled={isDownloading}
               >
                 <Download className="h-5 w-5" />
               </Button>
@@ -128,14 +174,18 @@ export default function NormalizationStep({
         <div>
           <h4 className="text-sm font-medium text-nlp-blue">After</h4>
           <div className="space-y-1">
-            {after.map((a, i) => (
-              <div
-                key={i}
-                className="text-sm bg-white p-2 border border-solid rounded"
-              >
-                {highlightDiff(before[i] || "", a)}
-              </div>
-            ))}
+            {isApplying ? (
+              <BeforeAfterTextLoader numberLoader={1} />
+            ) : (
+              after.map((a, i) => (
+                <div
+                  key={i}
+                  className="text-sm bg-white p-2 border border-solid rounded"
+                >
+                  {highlightDiff(before[i] || "", a)}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

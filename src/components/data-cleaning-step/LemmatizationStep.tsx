@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { CheckCircle2, Download, Loader2, XCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CleaningBadgeSection } from "@/components/data-cleaning-step/CleaningBadgeSection";
 import BeforeAfterTextLoader from "@/components/loaders/BeforeAfterTextLoader";
 import { useLemmatization } from "@/hooks/useLemmatization";
-import { useDownloadToast } from "@/hooks/useDownloadToast";
+import { useCompressedCSV } from "@/hooks/useDownloadPreviewCSV";
+import { toast } from "@/hooks/use-toast";
+import { TechniqueBadgeSection } from "@/components/data-cleaning-step/TechniqueBadgeSection";
 
 interface BadgeItem {
   label: string;
@@ -33,12 +34,61 @@ export default function LemmatizationStep({
     page,
     pageSize
   );
-  const { downloadFile } = useDownloadToast();
+  const { downloadDecompressed, isLoading: isDownloading } = useCompressedCSV(
+    data?.lemmatized_s3_url || "",
+    {
+      enabled: false,
+      filename: "lemmatized_reviews.csv",
+    }
+  );
 
   if (isLoading || !data) return <BeforeAfterTextLoader />;
 
-  const { before, after, total, lemmatized_s3_url, should_recompute } = data;
+  const { before, after, total, should_recompute } = data;
   const totalPages = Math.ceil(total / pageSize);
+
+  const handleApply = async () => {
+    const { dismiss } = toast({
+      title: "Lemmatization in progress...",
+      description: (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Please wait while we process the tokens.</span>
+        </div>
+      ),
+      open: true,
+    });
+
+    try {
+      await applyLemmatization();
+      dismiss();
+
+      toast({
+        title: "Lemmatization complete",
+        description: (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Tokens were successfully lemmatized.</span>
+          </div>
+        ),
+        duration: 4000,
+      });
+    } catch (err: any) {
+      console.error("❌ Lemmatization failed:", err);
+      dismiss();
+      toast({
+        title: "Lemmatization failed",
+        description: (
+          <div className="flex items-center gap-2 text-red-600">
+            <XCircle className="h-4 w-4" />
+            <span>{err?.message || "Unexpected error occurred."}</span>
+          </div>
+        ),
+        variant: "destructive",
+        duration: 4000,
+      });
+    }
+  };
 
   return (
     <>
@@ -48,9 +98,10 @@ export default function LemmatizationStep({
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
 
       {badges.length > 0 && (
-        <CleaningBadgeSection title="Techniques used:" badges={badges} />
+        <TechniqueBadgeSection title="Techniques used:" badges={badges} />
       )}
 
+      {/* Parameters */}
       <div className="mb-4 space-y-2">
         {should_recompute && (
           <div className="text-sm text-yellow-600 bg-yellow-50 border border-yellow-300 p-3 rounded-md">
@@ -58,12 +109,13 @@ export default function LemmatizationStep({
             latest changes.
           </div>
         )}
-        <div className="flex justify-between gap-1">
+
+        <div className="flex gap-1">
           <Button
             size="sm"
             className="text-xs w-full"
-            onClick={() => applyLemmatization()}
             disabled={isApplying}
+            onClick={handleApply}
           >
             {isApplying ? "Lemmatizing..." : "Apply Lemmatization"}
           </Button>
@@ -73,12 +125,8 @@ export default function LemmatizationStep({
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() =>
-                  downloadFile(lemmatized_s3_url, {
-                    filename: "lemmatized_reviews.csv",
-                    mimeType: "text/csv;charset=utf-8;",
-                  })
-                }
+                onClick={downloadDecompressed}
+                disabled={isDownloading}
               >
                 <Download className="h-5 w-5" />
               </Button>
@@ -106,14 +154,18 @@ export default function LemmatizationStep({
         <div>
           <h4 className="text-sm font-medium text-nlp-blue">Lemmatized</h4>
           <div className="space-y-1">
-            {after.map((tokens: string[], i: number) => (
-              <div
-                key={i}
-                className="text-sm bg-white p-2 border border-solid rounded"
-              >
-                {tokens.join(" | ")}
-              </div>
-            ))}
+            {isApplying ? (
+              <BeforeAfterTextLoader numberLoader={1} />
+            ) : (
+              after.map((tokens: string[], i: number) => (
+                <div
+                  key={i}
+                  className="text-sm bg-white p-2 border border-solid rounded"
+                >
+                  {tokens.join(" | ")}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

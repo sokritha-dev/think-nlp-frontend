@@ -1,5 +1,3 @@
-// src/components/FileUpload.tsx
-
 import { Dispatch, SetStateAction, useState } from "react";
 import { Upload, CheckCircle2, AlertCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,17 +31,18 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { useSampleData } from "@/hooks/useSampleSentiment";
 import { uploadFile, runSentimentPipeline } from "@/lib/api";
-import Papa from "papaparse";
+import { ENDPOINTS } from "@/constants/api";
+import axios from "axios";
+import { useCompressedCSV } from "@/hooks/useDownloadPreviewCSV";
 
 // Props
-type FileUploadProps = {
+interface FileUploadProps {
   onFileUpload: (data: any) => void;
   setUseSample: Dispatch<SetStateAction<boolean>>;
   loading: boolean;
   setLoading: Dispatch<SetStateAction<boolean>>;
-};
+}
 
 const FileUpload = ({
   onFileUpload,
@@ -54,37 +53,48 @@ const FileUpload = ({
   const [file, setFile] = useState<File | null>(null);
   const [isUploaded, setIsUploaded] = useState(false);
   const [showSampleDialog, setShowSampleDialog] = useState(false);
-  const { data: sampleData = [], isFetching, refetch } = useSampleData();
+  const [sampleUrl, setSampleUrl] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const {
+    previewData: sampleData,
+    isLoading: isFetching,
+    isError,
+    error,
+    downloadDecompressed: downloadSampleCSV,
+  } = useCompressedCSV(sampleUrl ?? "", {
+    enabled: !!sampleUrl,
+    previewRows: 10,
+    filename: "sample-data.csv.gz",
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
 
-    if (selectedFile) {
-      const isCSV = selectedFile.name.endsWith(".csv");
-      const isTooLarge = selectedFile.size > 5 * 1024 * 1024; // 5MB
+    const isCSV = selectedFile.name.endsWith(".csv");
+    const isTooLarge = selectedFile.size > 5 * 1024 * 1024; // 5MB
 
-      if (!isCSV) {
-        toast({
-          title: "Invalid file format",
-          description: "Only CSV files are supported.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (isTooLarge) {
-        toast({
-          title: "File too large",
-          description: "File size must be 5MB or less.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setFile(selectedFile);
-      setIsUploaded(false);
+    if (!isCSV) {
+      toast({
+        title: "Invalid file format",
+        description: "Only CSV files are supported.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    if (isTooLarge) {
+      toast({
+        title: "File too large",
+        description: "File size must be 5MB or less.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFile(selectedFile);
+    setIsUploaded(false);
   };
 
   const handleAnalyze = async () => {
@@ -104,12 +114,10 @@ const FileUpload = ({
         throw new Error("Missing 'review' field");
       }
 
-      // Upload file
       const uploadRes = await uploadFile(file);
       const fileId = uploadRes?.data?.data?.file_id;
       if (!fileId) throw new Error("Upload succeeded but file ID missing");
 
-      // Run pipeline
       const sentimentRes = await runSentimentPipeline(fileId);
 
       setIsUploaded(true);
@@ -130,18 +138,6 @@ const FileUpload = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const downloadPreviewCSV = () => {
-    const csv = Papa.unparse(sampleData);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "sample-preview.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
@@ -214,7 +210,18 @@ const FileUpload = ({
                         size="icon"
                         onClick={async () => {
                           setShowSampleDialog(true);
-                          await refetch();
+                          try {
+                            const res = await axios.get(
+                              ENDPOINTS.SAMPLE_DATA_URL
+                            );
+                            setSampleUrl(res.data.data.s3_url);
+                          } catch (err) {
+                            toast({
+                              title: "Failed to load sample file URL",
+                              description: "Please try again later.",
+                              variant: "destructive",
+                            });
+                          }
                         }}
                       >
                         <Eye className="h-5 w-5 text-gray-500 hover:text-blue-600" />
@@ -231,20 +238,19 @@ const FileUpload = ({
                 <DialogHeader>
                   <DialogTitle>📝 Sample Review Data</DialogTitle>
                   <DialogDescription>
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                      <span className="text-sm text-muted-foreground">
-                        This is the first 10 rows of the sample dataset.
-                      </span>
-                      <Button
-                        onClick={downloadPreviewCSV}
-                        variant="outline"
-                        size="sm"
-                        className="text-sm px-3"
-                      >
-                        ⬇️ Download CSV
-                      </Button>
-                    </div>
+                    This is the first 10 rows of the sample dataset.
                   </DialogDescription>
+
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      onClick={downloadSampleCSV}
+                      variant="outline"
+                      size="sm"
+                      className="text-sm px-3"
+                    >
+                      ⬇️ Download CSV
+                    </Button>
+                  </div>
                 </DialogHeader>
 
                 <div className="overflow-auto max-h-[400px] rounded-md border border-gray-200">
@@ -252,11 +258,15 @@ const FileUpload = ({
                     <p className="text-sm text-muted-foreground p-4">
                       Loading sample data...
                     </p>
+                  ) : isError ? (
+                    <p className="text-sm text-red-500 p-4">
+                      Failed to load preview: {error?.message}
+                    </p>
                   ) : (
                     <Table className="min-w-[600px] text-sm">
                       <TableHeader>
                         <TableRow className="bg-gray-50">
-                          {sampleData[0] &&
+                          {sampleData?.[0] &&
                             Object.keys(sampleData[0]).map((key) => (
                               <TableHead
                                 key={key}
@@ -268,7 +278,7 @@ const FileUpload = ({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sampleData.slice(0, 10).map((row, index) => (
+                        {sampleData?.map((row, index) => (
                           <TableRow key={index}>
                             {Object.values(row).map((value, i) => (
                               <TableCell

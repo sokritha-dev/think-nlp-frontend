@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { highlightDiff } from "@/components/TextDiffHighlight";
 import { useSpecialRemovalReviews } from "@/hooks/useSpecialRemoval";
-import { CleaningBadgeSection } from "@/components/data-cleaning-step/CleaningBadgeSection";
+import { TechniqueBadgeSection } from "@/components/data-cleaning-step/TechniqueBadgeSection";
 import React from "react";
 import BeforeAfterTextLoader from "@/components/loaders/BeforeAfterTextLoader";
 import {
@@ -10,8 +10,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Download } from "lucide-react";
-import { useDownloadToast } from "@/hooks/useDownloadToast";
+import { CheckCircle2, Download, Loader2, XCircle } from "lucide-react";
+import { useCompressedCSV } from "@/hooks/useDownloadPreviewCSV";
+import { useToast } from "@/hooks/use-toast";
 
 interface Badges {
   label: string;
@@ -35,9 +36,17 @@ export default function SpecialCharRemovalStep({
     remove_emoji: true,
   });
 
+  const { toast } = useToast();
   const { data, isLoading, isApplying, applySpecialClean } =
     useSpecialRemovalReviews(fileId, page, pageSize);
-  const { downloadFile } = useDownloadToast();
+
+  const { downloadDecompressed, isLoading: isDownloading } = useCompressedCSV(
+    data ? data.cleaned_s3_url : "",
+    {
+      enabled: false,
+      filename: "special_character_removal_reviews.csv",
+    }
+  );
 
   useEffect(() => {
     if (data?.flags) {
@@ -46,14 +55,54 @@ export default function SpecialCharRemovalStep({
   }, [data?.flags]);
 
   const handleApply = async () => {
-    await applySpecialClean({ ...flags, file_id: fileId });
+    const { dismiss } = toast({
+      title: "Cleaning will update the review data based on selected flags.",
+      description: (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Applying special character cleaning...</span>
+        </div>
+      ),
+      open: true,
+    });
+
+    try {
+      await applySpecialClean({ ...flags, file_id: fileId });
+
+      dismiss();
+
+      toast({
+        title: "Updated with latest flag settings.",
+        description: (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Special character cleaning applied</span>
+          </div>
+        ),
+        duration: 4000,
+      });
+    } catch (err: any) {
+      console.error("❌ Failed to apply special cleaning:", err);
+      dismiss();
+      toast({
+        title: err?.message || "Something went wrong during processing.",
+        description: (
+          <div className="flex items-center gap-2 text-red-600">
+            <XCircle className="h-4 w-4" />
+            <span>Failed to apply cleaning</span>
+          </div>
+        ),
+        variant: "destructive",
+        duration: 4000,
+      });
+    }
   };
 
   if (isLoading || !data) {
     return <BeforeAfterTextLoader />;
   }
 
-  const { before, after, total } = data;
+  const { before, after, total, should_recompute } = data;
   const totalPages = Math.ceil(total / pageSize);
 
   return (
@@ -64,31 +113,41 @@ export default function SpecialCharRemovalStep({
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
 
       {badges.length > 0 && (
-        <CleaningBadgeSection title="Techniques used:" badges={badges} />
+        <TechniqueBadgeSection title="Techniques used:" badges={badges} />
       )}
 
       {/* =============== Parameters ================ */}
-      <div className="space-y-2 mb-4">
-        <label className="text-xs text-muted-foreground font-medium">
-          Select cleaning options:
-        </label>
-        <div className="flex items-center gap-4">
-          {["remove_special", "remove_numbers", "remove_emoji"].map((key) => (
-            <label className="text-sm" key={key}>
-              <input
-                type="checkbox"
-                checked={flags[key as keyof typeof flags]}
-                onChange={() =>
-                  setFlags((f) => ({
-                    ...f,
-                    [key]: !f[key as keyof typeof flags],
-                  }))
-                }
-              />{" "}
-              {key.replace("remove_", "Remove ")}
-            </label>
-          ))}
+      <div className="mb-4 space-y-2">
+        {should_recompute && (
+          <div className="text-sm text-yellow-600 bg-yellow-50 border border-yellow-300 p-3 rounded-md">
+            ⚠️ You made changes in a previous step or config. Please regenerate
+            to reflect the latest data.
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-muted-foreground font-medium">
+            Select cleaning options:
+          </label>
+          <div className="flex items-center gap-4">
+            {["remove_special", "remove_numbers", "remove_emoji"].map((key) => (
+              <label className="text-sm" key={key}>
+                <input
+                  type="checkbox"
+                  checked={flags[key as keyof typeof flags]}
+                  onChange={() =>
+                    setFlags((f) => ({
+                      ...f,
+                      [key]: !f[key as keyof typeof flags],
+                    }))
+                  }
+                />{" "}
+                {key.replace("remove_", "Remove ")}
+              </label>
+            ))}
+          </div>
         </div>
+
         <div className="flex gap-1">
           <Button
             size="sm"
@@ -104,12 +163,8 @@ export default function SpecialCharRemovalStep({
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() =>
-                  downloadFile(data.cleaned_s3_url, {
-                    filename: "special_removed_reviews.csv",
-                    mimeType: "text/csv;charset=utf-8;",
-                  })
-                }
+                onClick={downloadDecompressed}
+                disabled={isDownloading}
               >
                 <Download className="h-5 w-5" />
               </Button>
@@ -137,14 +192,18 @@ export default function SpecialCharRemovalStep({
         <div>
           <h4 className="text-sm font-medium text-nlp-blue">After</h4>
           <div className="space-y-1">
-            {after.map((a, i) => (
-              <div
-                key={i}
-                className="text-sm bg-white p-2 border border-solid rounded"
-              >
-                {highlightDiff(before[i] || "", a)}
-              </div>
-            ))}
+            {isApplying ? (
+              <BeforeAfterTextLoader numberLoader={1} />
+            ) : (
+              after.map((a, i) => (
+                <div
+                  key={i}
+                  className="text-sm bg-white p-2 border border-solid rounded"
+                >
+                  {highlightDiff(before[i] || "", a)}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

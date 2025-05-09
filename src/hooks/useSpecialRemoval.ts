@@ -14,6 +14,7 @@ export type SpecialRemovalResult = {
     remove_numbers: boolean;
     remove_emoji: boolean;
   };
+  should_recompute: boolean;
 };
 
 export type SpecialRemovalConfig = {
@@ -42,6 +43,7 @@ export const useSpecialRemovalReviews = (
         removed_characters: res.data.data.removed_characters,
         total: res.data.data.total_records,
         flags: res.data.data.flags,
+        should_recompute: res.data.data.should_recompute,
       };
     },
     enabled: !!fileId,
@@ -57,6 +59,7 @@ export const useSpecialRemovalReviews = (
         removed_characters: res.data.data.removed_characters,
         total: res.data.data.total_records,
         flags: res.data.data.flags,
+        should_recompute: res.data.data.should_recompute,
       };
     },
     onSuccess: () => {
