@@ -8,6 +8,7 @@ export type NormalizedResult = {
   broken_words: string[];
   total: number;
   normalized_s3_url: string;
+  should_recompute: boolean;
 };
 
 export const useNormalizedReviews = (
@@ -32,6 +33,7 @@ export const useNormalizedReviews = (
         broken_words: res.data.data.broken_words || [],
         total: res.data.data.total_records,
         normalized_s3_url: res.data.data.normalized_s3_url,
+        should_recompute: res.data.data.should_recompute,
       };
     },
     enabled: !!fileId,
@@ -50,6 +52,7 @@ export const useNormalizedReviews = (
         broken_words: res.data.data.broken_words || [],
         total: res.data.data.total_records,
         normalized_s3_url: res.data.data.normalized_s3_url,
+        should_recompute: res.data.data.should_recompute,
       };
     },
     onSuccess: () => {

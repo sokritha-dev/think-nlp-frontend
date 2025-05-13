@@ -1,110 +1,59 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Info } from "lucide-react";
+import { ENDPOINTS } from "@/constants/api";
 import { Slider } from "@/components/ui/slider";
-import { Info, PieChart, CircleOff } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import TextLoader from "@/components/loaders/TextLoader";
+import { useNumTopics } from "@/hooks/useNumTopics";
 
-type TopicModelingStepProps = {
-  cleanedData: string[];
-  onTopicsGenerated: (topics: { id: number; docs: string[] }[]) => void;
-  onStepComplete: () => void;
-};
+export default function TopicModelingStep({ fileId, onStepComplete }) {
+  const [numTopics, setNumTopics] = useNumTopics();
+  const [autoSelect, setAutoSelect] = useState(false);
 
-const TopicModelingStep = ({ cleanedData, onTopicsGenerated, onStepComplete }: TopicModelingStepProps) => {
-  const [algorithm, setAlgorithm] = useState("lda");
-  const [numTopics, setNumTopics] = useState(3);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [topics, setTopics] = useState<{ id: number; docs: string[] }[]>([]);
-  const { toast } = useToast();
+  const {
+    mutate: runTopicModeling,
+    data,
+    isPending,
+    isSuccess,
+  } = useMutation({
+    mutationFn: async () => {
+      const payload = autoSelect
+        ? { file_id: fileId }
+        : { file_id: fileId, num_topics: numTopics };
+      const res = await axios.post(ENDPOINTS.TOPIC_LDA, payload);
+      if (res.data.status !== "success")
+        throw new Error("Topic modeling failed");
+      return res.data.data;
+    },
+    onSuccess: (data) => {
+      const params = new URLSearchParams(window.location.search);
+      params.set("topic_model_id", data.topic_model_id);
+      const newUrl = window.location.pathname + "?" + params.toString();
+      window.history.replaceState({}, "", newUrl);
+    },
+  });
 
-  const handleAlgorithmChange = (value: string) => {
-    setAlgorithm(value);
-  };
-
-  const handleNumTopicsChange = (value: number[]) => {
-    setNumTopics(value[0]);
-  };
-
-  const runTopicModeling = () => {
-    setIsProcessing(true);
-    
-    // Simulate processing time
-    setTimeout(() => {
-      // For the demo, we'll create a very simple "topic modeling" 
-      // In a real application, you would use an actual topic modeling algorithm
-      const mockTopicModeling = () => {
-        // Create a simple TF-IDF like matrix
-        const wordDocs: Record<string, number[]> = {};
-        cleanedData.forEach((doc, docIndex) => {
-          const words = doc.split(" ");
-          const uniqueWords = [...new Set(words)];
-          uniqueWords.forEach(word => {
-            if (!wordDocs[word]) {
-              wordDocs[word] = Array(cleanedData.length).fill(0);
-            }
-            const count = words.filter(w => w === word).length;
-            wordDocs[word][docIndex] = count;
-          });
-        });
-        
-        // Select some "seed" words for each topic (in a real scenario these would be determined algorithmically)
-        const topicSeeds = [
-          ["food", "restaurant", "service", "delicious", "menu"],
-          ["product", "quality", "price", "value", "purchase"],
-          ["app", "use", "interface", "feature", "user"]
-        ];
-        
-        // Assign docs to topics based on seed word presence
-        const topics: { id: number; docs: string[] }[] = Array(numTopics).fill(null).map((_, i) => ({ 
-          id: i, 
-          docs: [] 
-        }));
-        
-        cleanedData.forEach((doc, docIndex) => {
-          const docWords = doc.split(" ");
-          const topicScores = topicSeeds.map((seeds, topicId) => {
-            const score = seeds.reduce((acc, seed) => {
-              return acc + (docWords.includes(seed) ? 1 : 0);
-            }, 0);
-            return { topicId, score };
-          });
-          
-          // Find topic with highest score
-          const bestTopic = topicScores.sort((a, b) => b.score - a.score)[0];
-          
-          // If no clear winner (all scores 0), assign to random topic
-          const assignedTopicId = bestTopic.score > 0 
-            ? bestTopic.topicId 
-            : Math.floor(Math.random() * numTopics);
-          
-          topics[assignedTopicId].docs.push(doc);
-        });
-        
-        return topics.slice(0, numTopics);
-      };
-      
-      const generatedTopics = mockTopicModeling();
-      setTopics(generatedTopics);
-      onTopicsGenerated(generatedTopics);
-      setIsProcessing(false);
-      setIsComplete(true);
-      
-      toast({
-        title: "Topic modeling complete",
-        description: `Identified ${numTopics} topics in your data`,
-      });
-    }, 2000);
-  };
-
-  const handleComplete = () => {
-    onStepComplete();
-  };
+  useEffect(() => {
+    if (fileId) {
+      runTopicModeling();
+    }
+  }, [fileId, autoSelect, numTopics]);
 
   return (
     <Card className="animate-fade-in">
@@ -116,7 +65,10 @@ const TopicModelingStep = ({ cleanedData, onTopicsGenerated, onStepComplete }: T
               Discover hidden topics in your review data
             </CardDescription>
           </div>
-          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+          <Badge
+            variant="outline"
+            className="bg-purple-50 text-purple-700 border-purple-200"
+          >
             Step 3
           </Badge>
         </div>
@@ -125,106 +77,123 @@ const TopicModelingStep = ({ cleanedData, onTopicsGenerated, onStepComplete }: T
         <div className="nlp-explanation mb-6">
           <div className="flex gap-2 items-start mb-2">
             <Info className="h-5 w-5 text-blue-700 mt-0.5" />
-            <h3 className="font-medium text-nlp-blue">What is Topic Modeling?</h3>
+            <h3 className="font-medium text-nlp-blue">
+              What is Topic Modeling?
+            </h3>
           </div>
           <p className="mb-2">
-            Topic modeling is an unsupervised machine learning technique that discovers abstract "topics" in a collection of documents:
+            Topic modeling is an unsupervised machine learning technique that
+            discovers abstract "topics" in a collection of documents:
           </p>
           <ul className="list-disc list-inside space-y-1 pl-4">
-            <li>It identifies patterns of word co-occurrence that represent themes</li>
-            <li>Each document can contain multiple topics in different proportions</li>
-            <li>Common algorithms include LDA (Latent Dirichlet Allocation), NMF, and BERT-based approaches</li>
+            <li>
+              It identifies patterns of word co-occurrence that represent themes
+            </li>
+            <li>
+              Each document can contain multiple topics in different proportions
+            </li>
+            <li>
+              Common algorithms include LDA (Latent Dirichlet Allocation), NMF,
+              and BERT-based approaches
+            </li>
             <li>Requires specifying the number of topics to identify</li>
           </ul>
-          <p className="mt-2">
-            Topic modeling helps organize and summarize large text collections and discover hidden patterns.
-          </p>
+
+          <Collapsible className="mt-4">
+            <CollapsibleTrigger className="text-sm text-blue-600 hover:underline">
+              📊 See how LDA works (simple analogy)
+            </CollapsibleTrigger>
+            <CollapsibleContent className="text-sm mt-2 space-y-2">
+              <p>
+                Imagine you walk into a library with 100 books. You don’t know
+                the titles or genres.
+              </p>
+              <ul className="list-disc list-inside pl-4">
+                <li>You scan the words inside each book</li>
+                <li>
+                  You notice “pool”, “beach”, “sun” appear together often →
+                  Topic A
+                </li>
+                <li>“staff”, “friendly”, “service” → Topic B</li>
+                <li>Each book mixes these topics in different proportions</li>
+              </ul>
+              <p>
+                That’s what LDA does — it learns hidden topics by spotting word
+                patterns, without needing labeled data.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+        <div className="space-y-4">
           <div>
-            <h3 className="text-sm font-medium mb-3">Algorithm Selection</h3>
-            <Select value={algorithm} onValueChange={handleAlgorithmChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select algorithm" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lda">Latent Dirichlet Allocation (LDA)</SelectItem>
-                <SelectItem value="nmf">Non-negative Matrix Factorization (NMF)</SelectItem>
-                <SelectItem value="bert">BERT Embedding Clustering</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-2">
-              {algorithm === "lda" && "LDA is a probabilistic model that identifies topics based on word co-occurrence patterns."}
-              {algorithm === "nmf" && "NMF decomposes the document-term matrix to find topics as non-negative linear combinations of terms."}
-              {algorithm === "bert" && "Uses BERT embeddings with clustering to identify semantically similar document groups."}
-            </p>
+            <label className="font-medium text-sm mb-2 block">
+              Number of Topics {autoSelect ? "(Auto)" : `: ${numTopics}`}
+            </label>
+
+            {!autoSelect && (
+              <div className="space-y-2">
+                <Slider
+                  value={[numTopics || 4]}
+                  min={2}
+                  max={10}
+                  step={1}
+                  onValueChange={(val) => {
+                    setAutoSelect(false);
+                    setNumTopics(val[0]);
+                  }}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Choose how many distinct topics to extract from your reviews.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center mt-3">
+              <span className="text-xs text-muted-foreground">
+                Automatically choose best number of topics?
+              </span>
+              <Button
+                variant={autoSelect ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAutoSelect(!autoSelect)}
+              >
+                {autoSelect ? "Auto: ON" : "Auto: OFF"}
+              </Button>
+            </div>
           </div>
-          
-          <div>
-            <h3 className="text-sm font-medium mb-3">Number of Topics: {numTopics}</h3>
-            <Slider
-              value={[numTopics]}
-              min={2}
-              max={6}
-              step={1}
-              onValueChange={handleNumTopicsChange}
-              className="py-4"
+
+          {isPending && (
+            <TextLoader
+              topic="Running topic modeling..."
+              description="This may take up to 1 minute depending on your dataset."
             />
-            <p className="text-xs text-muted-foreground mt-2">
-              Choose how many distinct topics to identify in your data. Too few may merge unrelated topics, too many may create overly specific categories.
-            </p>
-          </div>
+          )}
+
+          {isSuccess && (
+            <div className="mt-6">
+              <h3 className="text-sm font-medium mb-2">Detected Topics</h3>
+              <ul className="space-y-2 text-sm">
+                {data.topics.map((topic, idx) => (
+                  <li
+                    key={topic.topic_id}
+                    className="p-3 border border-muted rounded bg-muted/30"
+                  >
+                    <strong>Topic {Number(topic.topic_id) + 1}:</strong>{" "}
+                    {topic.keywords}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-        
-        <div className="mb-6">
-          <Button 
-            onClick={runTopicModeling} 
-            disabled={isProcessing || isComplete}
-            className="w-full md:w-auto"
-          >
-            {isProcessing ? "Processing..." : isComplete ? "Topics Generated" : "Run Topic Modeling"}
-          </Button>
-        </div>
-        
-        {isComplete && (
-          <Tabs defaultValue="topic-1">
-            <TabsList className="mb-4">
-              {topics.map((topic, i) => (
-                <TabsTrigger key={`topic-tab-${i}`} value={`topic-${i + 1}`}>
-                  Topic {i + 1} ({topic.docs.length} reviews)
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            
-            {topics.map((topic, i) => (
-              <TabsContent key={`topic-content-${i}`} value={`topic-${i + 1}`}>
-                <div className="bg-muted/30 rounded-md p-3 h-60 overflow-y-auto border border-border">
-                  {topic.docs.length > 0 ? (
-                    topic.docs.map((doc, j) => (
-                      <div key={`topic-${i}-doc-${j}`} className="mb-2 text-sm">
-                        {doc}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                      <CircleOff className="h-8 w-8 mb-2" />
-                      <p>No documents assigned to this topic</p>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
       </CardContent>
       <CardFooter className="flex justify-end">
-        <Button onClick={handleComplete} disabled={!isComplete}>
+        <Button onClick={onStepComplete} disabled={!isSuccess}>
           Complete & Continue
         </Button>
       </CardFooter>
     </Card>
   );
-};
-
-export default TopicModelingStep;
+}

@@ -15,7 +15,7 @@ import FileUpload from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
 import {
   SentimentResults,
-  useSampleSentiment,
+  useSentimentResult,
 } from "@/hooks/useSampleSentiment";
 import { useLoadingMessages } from "@/hooks/useLoadingMessages";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +24,9 @@ import { SentimentOverallChart } from "@/components/sentiment-charts/SentimentOv
 
 const Index = () => {
   const navigate = useNavigate();
+  const searchParams = new URLSearchParams(window.location.search);
+  const fileId = searchParams.get("file_id");
+
   const [userSentimentResult, setUserSentimentResult] =
     useState<SentimentResults | null>(null);
   const [showSteps, setShowSteps] = useState(false);
@@ -33,14 +36,18 @@ const Index = () => {
   const loadingMessage = useLoadingMessages();
 
   const {
-    data: sampleSentimentResult,
+    data: sentimentResult,
     isLoading,
     isError,
     error,
     refetch,
-  } = useSampleSentiment(useSample);
+  } = useSentimentResult(
+    useSample
+      ? "3ce5447e-18e4-4b1f-a893-3259ea1d961a"
+      : userSentimentResult?.file_id || fileId
+  );
 
-  const finalSentimentResult = sampleSentimentResult || userSentimentResult;
+  const finalSentimentResult = sentimentResult || userSentimentResult;
   const isFinalLoading = isLoading || isUploading;
 
   const handleFileUpload = async (data: SentimentResults) => {
@@ -169,9 +176,7 @@ const Index = () => {
                 </p>
                 <Button
                   onClick={() =>
-                    navigate("/steps", {
-                      state: { fileId: finalSentimentResult.file_id },
-                    })
+                    navigate(`/steps?file_id=${finalSentimentResult.file_id}`)
                   }
                   className="bg-white text-indigo-700 hover:bg-indigo-50"
                 >

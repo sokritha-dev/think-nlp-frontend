@@ -1,112 +1,60 @@
-
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Info, Smile, Frown, Meh, BarChart4 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { CartesianGrid, Legend, Line, LineChart, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Download, Info } from "lucide-react";
+import { useSentimentAnalysis } from "@/hooks/useSentimentAnalysis";
+import { SentimentOverallChart } from "@/components/sentiment-charts/SentimentOverallChart";
+import { SentimentByTopicChart } from "@/components/sentiment-charts/SentimentByTopicChart";
+import TextLoader from "@/components/loaders/TextLoader";
+import html2canvas from "html2canvas";
 
-type SentimentAnalysisStepProps = {
-  labeledTopics: { id: number; label: string; docs: string[] }[];
-  onStepComplete: () => void;
-};
-
-// Types for the sentiment analysis results
-type TopicSentiment = {
-  topicId: number;
-  topicLabel: string;
-  positive: number;
-  neutral: number;
-  negative: number;
-  average: number;
-};
-
-type SentimentResults = {
-  byTopic: TopicSentiment[];
-  overall: {
-    positive: number;
-    neutral: number;
-    negative: number;
-    average: number;
-  };
-};
-
-const SentimentAnalysisStep = ({ labeledTopics, onStepComplete }: SentimentAnalysisStepProps) => {
+export default function SentimentAnalysisStep({
+  onStepComplete,
+}) {
+  const searchParams = new URLSearchParams(window.location.search);
+  const topicModelId = searchParams.get("topic_model_id");
+  const chartRef = useRef(null);
   const [algorithm, setAlgorithm] = useState("vader");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [sentimentResults, setSentimentResults] = useState<SentimentResults | null>(null);
-  
-  const { toast } = useToast();
+  const [shouldRecompute, setShouldRecompute] = useState(false);
 
-  const handleAlgorithmChange = (value: string) => {
-    setAlgorithm(value);
-  };
+  const {
+    data,
+    isLoading,
+    isError,
+    runAnalysis,
+    isRunning,
+    shouldRecompute: needRecompute,
+    notFound,
+  } = useSentimentAnalysis({ topicModelId, algorithm });
 
-  // This function would call your backend API instead of doing calculations in the frontend
-  const runSentimentAnalysis = () => {
-    setIsProcessing(true);
-    
-    // Simulate API call with mock data
-    setTimeout(() => {
-      // Mock data that would come from your backend
-      const mockResults: SentimentResults = {
-        byTopic: labeledTopics.map(topic => ({
-          topicId: topic.id,
-          topicLabel: topic.label,
-          positive: Math.random() * 60 + 20, // random percentage between 20-80%
-          neutral: Math.random() * 40 + 10, // random percentage between 10-50%
-          negative: Math.random() * 30 + 5, // random percentage between 5-35%
-          average: Math.random() * 2 - 1, // random score between -1 and 1
-        })),
-        overall: {
-          positive: 55,
-          neutral: 30,
-          negative: 15,
-          average: 0.4
-        }
-      };
-      
-      // Ensure percentages add up to 100% for each topic
-      mockResults.byTopic = mockResults.byTopic.map(topic => {
-        const total = topic.positive + topic.neutral + topic.negative;
-        return {
-          ...topic,
-          positive: (topic.positive / total) * 100,
-          neutral: (topic.neutral / total) * 100,
-          negative: (topic.negative / total) * 100
-        };
-      });
-      
-      setSentimentResults(mockResults);
-      setIsProcessing(false);
-      setIsComplete(true);
-      
-      toast({
-        title: "Sentiment analysis complete",
-        description: `Overall sentiment: ${getSentimentText(mockResults.overall.average)}`,
-      });
-    }, 2000); // Simulate 2-second API call
-  };
+  useEffect(() => {
+    if (data && "should_recompute" in data) {
+      setShouldRecompute(needRecompute);
+    }
+  }, [data]);
 
-  const getSentimentText = (score: number) => {
-    if (score > 0.2) return "Positive";
-    if (score < -0.2) return "Negative";
-    return "Neutral";
-  };
-
-  const getSentimentIcon = (score: number) => {
-    if (score > 0.2) return <Smile className="h-5 w-5 text-green-500" />;
-    if (score < -0.2) return <Frown className="h-5 w-5 text-red-500" />;
-    return <Meh className="h-5 w-5 text-amber-500" />;
-  };
-
-  const COLORS = ['#4FD1C5', '#A0AEC0', '#FC8181'];
-
-  const handleComplete = () => {
-    onStepComplete();
+  const handleRun = () => {
+    runAnalysis();
   };
 
   return (
@@ -119,209 +67,133 @@ const SentimentAnalysisStep = ({ labeledTopics, onStepComplete }: SentimentAnaly
               Analyze the emotional tone of reviews by topic
             </CardDescription>
           </div>
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200"
+          >
             Step 5
           </Badge>
         </div>
       </CardHeader>
+
       <CardContent>
-        <div className="nlp-explanation mb-6">
+        <div className="mb-6">
           <div className="flex gap-2 items-start mb-2">
             <Info className="h-5 w-5 text-blue-700 mt-0.5" />
-            <h3 className="font-medium text-nlp-blue">What is Sentiment Analysis?</h3>
+            <h3 className="font-medium text-nlp-blue">
+              What is Sentiment Analysis?
+            </h3>
           </div>
-          <p className="mb-2">
-            Sentiment analysis identifies and extracts emotional tone and subjective information from text:
-          </p>
-          <ul className="list-disc list-inside space-y-1 pl-4">
-            <li>Typically classifies text as positive, negative, or neutral</li>
-            <li>Can be rule-based (using lexicons) or machine learning-based</li>
-            <li>Reveals how customers feel about different topics or aspects</li>
-            <li>Helps prioritize areas for improvement and identify strengths</li>
+          <ul className="list-disc list-inside space-y-1 pl-4 text-sm">
+            <li>Classifies text as positive, negative, or neutral</li>
+            <li>Can be rule-based or model-based</li>
+            <li>Reveals emotional tone in user feedback</li>
+            <li>Used to detect strengths and pain points</li>
           </ul>
-          <p className="mt-2">
-            Combining sentiment analysis with topic modeling provides powerful insights about specific aspects of products or services.
-          </p>
+
+          <Collapsible className="mt-4">
+            <CollapsibleTrigger className="text-sm text-blue-600 hover:underline">
+              🧠 See how different sentiment models work
+            </CollapsibleTrigger>
+            <CollapsibleContent className="text-sm mt-2 space-y-4">
+              <div>
+                <strong>VADER</strong> is a rule-based model trained on social
+                media text. It uses a dictionary of lexical features and
+                calculates sentiment from those features.
+              </div>
+              <div>
+                <strong>TextBlob</strong> uses a pre-trained Naive Bayes
+                classifier and provides a polarity score between -1 and 1.
+              </div>
+              <div>
+                <strong>BERT</strong> is a deep learning model that understands
+                context and nuance, producing state-of-the-art accuracy but at
+                higher computation cost.
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div>
-            <h3 className="text-sm font-medium mb-3">Sentiment Analyzer</h3>
-            <Select value={algorithm} onValueChange={handleAlgorithmChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select algorithm" />
+            <Select value={algorithm} onValueChange={setAlgorithm}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select analyzer" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="vader">VADER (Rule-based)</SelectItem>
+                <SelectItem value="vader">VADER</SelectItem>
                 <SelectItem value="textblob">TextBlob</SelectItem>
-                <SelectItem value="bert">BERT for Sentiment</SelectItem>
+                <SelectItem value="bert">BERT</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground mt-2">
-              {algorithm === "vader" && "VADER is specifically tuned for social media content and short texts like reviews."}
-              {algorithm === "textblob" && "TextBlob provides a simple API for sentiment analysis with polarity scores."}
-              {algorithm === "bert" && "BERT-based models provide state-of-the-art sentiment analysis with deep contextual understanding."}
+              {algorithm === "vader" &&
+                "Lexicon-based, works well for short, social content."}
+              {algorithm === "textblob" &&
+                "Polarity and subjectivity scores using a simple API."}
+              {algorithm === "bert" &&
+                "Transformer-based deep contextual understanding."}
             </p>
           </div>
-          
           <div>
-            <Button 
-              onClick={runSentimentAnalysis} 
-              disabled={isProcessing || isComplete}
-              className="w-full"
-            >
-              {isProcessing ? "Processing..." : isComplete ? "Analysis Complete" : "Analyze Sentiment"}
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              The analyzer will classify each review as positive, negative, or neutral and provide aggregated results by topic.
-            </p>
+            {(shouldRecompute || isError) && (
+              <Button
+                className="w-full"
+                onClick={handleRun}
+                disabled={isRunning}
+              >
+                {isRunning ? "Analyzing..." : "Run Sentiment Analysis"}
+              </Button>
+            )}
           </div>
         </div>
-        
-        {isComplete && sentimentResults && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-medium mb-4">Overall Sentiment Distribution</h3>
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="md:w-1/2">
-                  <div className="h-72 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: "Positive", value: sentimentResults.overall.positive },
-                            { name: "Neutral", value: sentimentResults.overall.neutral },
-                            { name: "Negative", value: sentimentResults.overall.negative }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={true}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => {
-                            // Safely convert percent to number for toFixed
-                            const percentValue = typeof percent === 'number' ? percent : 0;
-                            return `${name} (${(percentValue * 100).toFixed(1)}%)`;
-                          }}
-                        >
-                          <Cell fill={COLORS[0]} />
-                          <Cell fill={COLORS[1]} />
-                          <Cell fill={COLORS[2]} />
-                        </Pie>
-                        <Tooltip formatter={(value) => {
-                          // Ensure value is a number before using toFixed
-                          return typeof value === 'number' ? [`${value.toFixed(1)}%`, 'Percentage'] : [value, 'Percentage'];
-                        }} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-                
-                <div className="md:w-1/2 flex flex-col justify-center">
-                  <div className="bg-muted/30 rounded-md p-4 border border-border">
-                    <div className="flex items-center gap-2 mb-3">
-                      {getSentimentIcon(sentimentResults.overall.average)}
-                      <span className="text-lg font-medium">
-                        {getSentimentText(sentimentResults.overall.average)} Overall Sentiment
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      The average sentiment across all reviews leans {getSentimentText(sentimentResults.overall.average).toLowerCase()}, with {sentimentResults.overall.positive.toFixed(1)}% positive and {sentimentResults.overall.negative.toFixed(1)}% negative reviews.
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="flex flex-col items-center p-2 bg-green-50 rounded">
-                        <Smile className="h-4 w-4 mb-1 text-green-500" />
-                        <span className="text-xs text-muted-foreground">Positive</span>
-                        <span className="font-medium">{sentimentResults.overall.positive.toFixed(1)}%</span>
-                      </div>
-                      <div className="flex flex-col items-center p-2 bg-gray-50 rounded">
-                        <Meh className="h-4 w-4 mb-1 text-gray-500" />
-                        <span className="text-xs text-muted-foreground">Neutral</span>
-                        <span className="font-medium">{sentimentResults.overall.neutral.toFixed(1)}%</span>
-                      </div>
-                      <div className="flex flex-col items-center p-2 bg-red-50 rounded">
-                        <Frown className="h-4 w-4 mb-1 text-red-500" />
-                        <span className="text-xs text-muted-foreground">Negative</span>
-                        <span className="font-medium">{sentimentResults.overall.negative.toFixed(1)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
+        {(isLoading || isRunning) && (
+          <TextLoader
+            topic="Running sentiment analysis..."
+            description="This may take up a few minutes depending on your dataset."
+          />
+        )}
+
+        {notFound && (
+          <div className="text-sm text-muted-foreground mb-4 border border-yellow-200 bg-yellow-50 rounded p-4">
+            <strong>This analysis has not been run yet.</strong> Click "Run
+            Sentiment Analysis" to compute results using the selected method.
+          </div>
+        )}
+
+        {data && data.per_topic && data.per_topic.length > 0 && (
+          <div className="flex flex-col">
+            <div ref={chartRef} className="space-y-10">
+              <SentimentOverallChart {...data.overall} />
+              <SentimentByTopicChart data={data.per_topic} />
             </div>
-            
-            <div>
-              <h3 className="text-sm font-medium mb-4">Sentiment by Topic</h3>
-              <div className="h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={sentimentResults.byTopic}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 160, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" domain={[0, 100]} tickFormatter={(tick) => `${tick}%`} />
-                    <YAxis dataKey="topicLabel" type="category" width={150} />
-                    <Tooltip 
-                      formatter={(value, name) => {
-                        // Ensure value is a number before using toFixed
-                        const formattedValue = typeof value === 'number' ? `${value.toFixed(1)}%` : value;
-                        const displayName = name === 'positive' ? 'Positive' : name === 'neutral' ? 'Neutral' : 'Negative';
-                        return [formattedValue, displayName];
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="positive" name="Positive" stackId="a" fill={COLORS[0]} />
-                    <Bar dataKey="neutral" name="Neutral" stackId="a" fill={COLORS[1]} />
-                    <Bar dataKey="negative" name="Negative" stackId="a" fill={COLORS[2]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                {sentimentResults.byTopic.map((topic) => (
-                  <div key={`topic-sentiment-${topic.topicId}`} className="bg-white shadow-sm rounded-lg p-4 border border-gray-100">
-                    <div className="flex items-center gap-2 mb-3">
-                      {getSentimentIcon(topic.average)}
-                      <h4 className="font-medium truncate">{topic.topicLabel}</h4>
-                    </div>
-                    <div className="mb-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="flex h-full">
-                        <div 
-                          className="bg-green-500" 
-                          style={{ width: `${topic.positive}%` }}
-                        ></div>
-                        <div 
-                          className="bg-gray-400" 
-                          style={{ width: `${topic.neutral}%` }}
-                        ></div>
-                        <div 
-                          className="bg-red-500" 
-                          style={{ width: `${topic.negative}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{topic.positive.toFixed(1)}% positive</span>
-                      <span>{topic.neutral.toFixed(1)}% neutral</span>
-                      <span>{topic.negative.toFixed(1)}% negative</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Button
+              variant="outline"
+              className="ml-auto mb-4 self-end"
+              onClick={async () => {
+                if (chartRef.current) {
+                  const canvas = await html2canvas(chartRef.current);
+                  const link = document.createElement("a");
+                  link.download = "sentiment-analysis.png";
+                  link.href = canvas.toDataURL();
+                  link.click();
+                }
+              }}
+            >
+              <Download className="w-4 h-4 mr-1" /> <span>Export Image</span>
+            </Button>
           </div>
         )}
       </CardContent>
       <CardFooter className="flex justify-end">
-        <Button onClick={handleComplete} disabled={!isComplete}>
+        <Button
+          onClick={onStepComplete}
+          disabled={!data || !data.per_topic?.length}
+        >
           Complete NLP Pipeline
         </Button>
       </CardFooter>
     </Card>
   );
-};
-
-export default SentimentAnalysisStep;
+}

@@ -38,13 +38,21 @@ const getSentimentIcon = (positive: number, negative: number) => {
 };
 
 export const SentimentByTopicChart = ({ data }: Props) => {
+  const roundedData = data.map((topic) => ({
+    ...topic,
+    positive: parseFloat(topic.positive.toFixed(1)),
+    neutral: parseFloat(topic.neutral.toFixed(1)),
+    negative: parseFloat(topic.negative.toFixed(1)),
+  }));
+
   return (
     <div className="mt-10">
       <h3 className="text-sm font-medium mb-4">Sentiment by Topic</h3>
+
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data}
+            data={roundedData}
             layout="vertical"
             margin={{ top: 5, right: 30, left: 160, bottom: 5 }}
           >
@@ -52,7 +60,7 @@ export const SentimentByTopicChart = ({ data }: Props) => {
             <XAxis
               type="number"
               domain={[0, 100]}
-              tickFormatter={(tick) => `${tick}%`}
+              tickFormatter={(tick) => `${tick.toFixed(0)}%`}
             />
             <YAxis dataKey="label" type="category" width={150} />
             <Tooltip
@@ -90,7 +98,7 @@ export const SentimentByTopicChart = ({ data }: Props) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
         <TooltipProvider>
-          {data.map((topic, idx) => (
+          {roundedData.map((topic, idx) => (
             <div
               key={idx}
               className="bg-white rounded-lg border border-gray-200 shadow-sm p-4"

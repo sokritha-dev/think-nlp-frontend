@@ -23,10 +23,12 @@ export default function SpecialCharRemovalStep({
   fileId,
   description,
   badges,
+  refetchStatus,
 }: {
   fileId: string;
   description: string;
   badges: Badges[];
+  refetchStatus: () => void;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -81,6 +83,8 @@ export default function SpecialCharRemovalStep({
         ),
         duration: 4000,
       });
+
+      await refetchStatus();
     } catch (err: any) {
       console.error("❌ Failed to apply special cleaning:", err);
       dismiss();

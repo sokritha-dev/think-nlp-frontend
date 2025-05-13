@@ -1,226 +1,400 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { useRef, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Info, BarChart2, Hash, Clock } from "lucide-react";
-import { CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
+import { Button } from "@/components/ui/button";
+import {
+  BarChart2,
+  Hash,
+  Clock,
+  Info,
+  Download,
+  ChevronDown,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell,
+} from "recharts";
+import { ENDPOINTS } from "@/constants/api";
+import WordCloud from "react-wordcloud";
+import html2canvas from "html2canvas";
+import ChartLoader from "@/components/loaders/ChartLoader";
+import TextLoader from "@/components/loaders/TextLoader";
 
-type DataExplorationStepProps = {
-  cleanedData: string[];
-  onStepComplete: () => void;
-};
+function generateRandomColors(count: number): string[] {
+  const colors: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const hue = Math.floor((360 / count) * i);
+    const saturation = 70 + Math.floor(Math.random() * 20);
+    const lightness = 50 + Math.floor(Math.random() * 10);
+    colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+  }
+  return colors;
+}
 
-const DataExplorationStep = ({ cleanedData, onStepComplete }: DataExplorationStepProps) => {
+const COLORS = generateRandomColors(100);
+
+function CollapsibleInfoBox({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="mt-4 border border-gray-200 rounded-md bg-blue-50 p-4 transition-all">
+      <button
+        className="flex items-center justify-between w-full text-left font-medium text-blue-800"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span>{title}</span>
+        <ChevronDown
+          className={`h-4 w-4 transform transition-transform ${
+            expanded ? "rotate-180" : "rotate-0"
+          }`}
+        />
+      </button>
+      {expanded && (
+        <div className="mt-3 text-sm text-blue-900 leading-relaxed">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function DataExplorationStep({ fileId, onStepComplete }) {
   const [activeTab, setActiveTab] = useState("word-freq");
 
-  // Word frequency analysis
-  const wordFrequency: Record<string, number> = {};
-  cleanedData.forEach(review => {
-    const words = review.split(" ");
-    words.forEach(word => {
-      if (word) {
-        wordFrequency[word] = (wordFrequency[word] || 0) + 1;
-      }
-    });
+  const wordFreqRef = useRef(null);
+  const bigramRef = useRef(null);
+  const trigramRef = useRef(null);
+  const lengthRef = useRef(null);
+  const cloudRef = useRef(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["eda-summary", fileId],
+    queryFn: async () => {
+      const res = await axios.post(ENDPOINTS.DATA_EDA, { file_id: fileId });
+      if (res.data.status !== "success") throw new Error("Failed to fetch EDA");
+      const raw = res.data.data;
+
+      const maxLen = Math.max(...raw.length_distribution.map((d) => d.length));
+      const bucketSize = Math.ceil(maxLen / 20 / 10) * 10;
+
+      const bucketedLengths: Record<string, number> = {};
+      raw.length_distribution.forEach(({ length, count }) => {
+        const bucketStart = Math.floor(length / bucketSize) * bucketSize;
+        const bucketEnd = bucketStart + bucketSize - 1;
+        const label = `${bucketStart}-${bucketEnd}`;
+        bucketedLengths[label] = (bucketedLengths[label] || 0) + count;
+      });
+
+      return {
+        ...raw,
+        full_wordcloud: raw.word_cloud.map((item) => ({
+          text: item.text.replace(/^'+|'+$/g, "").replace(/['",]/g, ""),
+          value: item.value,
+        })),
+        top_20_frequent_words: raw.word_cloud.slice(0, 20).map((item) => ({
+          word: item.text.replace(/['",]/g, ""),
+          count: item.value,
+        })),
+        bucketed_length_data: Object.entries(bucketedLengths).map(
+          ([bucket, count]) => ({ bucket, count })
+        ),
+      };
+    },
+    enabled: !!fileId,
   });
 
-  // Sort words by frequency for visualization
-  const wordFreqData = Object.entries(wordFrequency)
-    .map(([word, count]) => ({ word, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 20);
-
-  // Word length distribution
-  const wordLengths: Record<number, number> = {};
-  Object.keys(wordFrequency).forEach(word => {
-    const length = word.length;
-    wordLengths[length] = (wordLengths[length] || 0) + 1;
-  });
-
-  const wordLengthData = Object.entries(wordLengths)
-    .map(([length, count]) => ({ length: Number(length), count }))
-    .sort((a, b) => a.length - b.length);
-
-  // N-gram analysis (bigrams)
-  const bigrams: Record<string, number> = {};
-  cleanedData.forEach(review => {
-    const words = review.split(" ");
-    if (words.length < 2) return;
-    
-    for (let i = 0; i < words.length - 1; i++) {
-      if (words[i] && words[i+1]) {
-        const bigram = `${words[i]} ${words[i+1]}`;
-        bigrams[bigram] = (bigrams[bigram] || 0) + 1;
-      }
-    }
-  });
-
-  const bigramData = Object.entries(bigrams)
-    .map(([bigram, count]) => ({ bigram, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 15);
-
-  // Generate a word cloud data
-  const wordCloudData = wordFreqData.map(item => ({
-    text: item.word,
-    value: item.count,
-  }));
-
-  // Colors for charts
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
-
-  const handleComplete = () => {
-    onStepComplete();
+  const exportAsImage = async (ref: any, filename: string) => {
+    if (!ref.current) return;
+    const canvas = await html2canvas(ref.current);
+    const link = document.createElement("a");
+    link.download = `${filename}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
   };
+
+  const renderVerticalBar = (data: any[], key: string, ref, colorIndex = 0) => (
+    <div className="relative">
+      <div ref={ref}>
+        <ResponsiveContainer width="100%" height={360}>
+          <BarChart
+            data={data}
+            margin={{ top: 5, right: 30, left: 20, bottom: 30 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey={key}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={100}
+            />
+            <YAxis />
+            <Tooltip />
+            <Bar
+              dataKey="count"
+              isAnimationActive
+              animationDuration={800}
+              fill={COLORS[colorIndex % COLORS.length]}
+            >
+              {data.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-2 text-right">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => exportAsImage(ref, key)}
+        >
+          <Download className="w-4 h-4 mr-1" /> Export as Image
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <Card className="animate-fade-in">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>Data Exploration</CardTitle>
+            <CardTitle>Exploratory Data Analysis (EDA)</CardTitle>
             <CardDescription>
-              Discover patterns and insights in your text data
+              Visualize the structure and vocabulary in your reviews.
             </CardDescription>
           </div>
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+          <Badge
+            variant="outline"
+            className="bg-amber-50 text-amber-700 border-amber-200"
+          >
             Step 2
           </Badge>
         </div>
       </CardHeader>
+
       <CardContent>
-        <div className="nlp-explanation mb-6">
-          <div className="flex gap-2 items-start mb-2">
-            <Info className="h-5 w-5 text-blue-700 mt-0.5" />
-            <h3 className="font-medium text-nlp-blue">What is Data Exploration?</h3>
-          </div>
-          <p className="mb-2">
-            Data exploration helps us understand the characteristics and patterns within our text data:
-          </p>
-          <ul className="list-disc list-inside space-y-1 pl-4">
-            <li>Word frequency analysis reveals the most common terms</li>
-            <li>Word length distribution shows complexity of language</li>
-            <li>N-gram analysis identifies common phrases and word combinations</li>
-            <li>Visual representations make patterns easier to identify</li>
-          </ul>
-          <p className="mt-2">
-            These insights help guide the next steps of your NLP pipeline and identify potential areas for further cleaning or focus.
-          </p>
-        </div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="word-freq" className="flex items-center gap-2">
-              <BarChart2 className="h-4 w-4" />
-              <span>Word Frequency</span>
-            </TabsTrigger>
-            <TabsTrigger value="ngrams" className="flex items-center gap-2">
-              <Hash className="h-4 w-4" />
-              <span>N-grams</span>
-            </TabsTrigger>
-            <TabsTrigger value="word-length" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>Word Length</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="word-freq" className="pt-4">
-            <h3 className="text-sm font-medium mb-4">Top 20 Most Frequent Words</h3>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={wordFreqData} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="word" type="category" width={80} />
-                  <Tooltip formatter={(value) => [`${value} occurrences`, 'Frequency']} />
-                  <Bar dataKey="count" fill="#38B2AC">
-                    {wordFreqData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-6">
-              <h3 className="text-sm font-medium mb-4">Word Distribution</h3>
-              <div className="h-60 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={wordFreqData.slice(0, 8)}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      outerRadius={80}
-                      fill="#8884d8"
+        {isLoading || !data ? (
+          <TextLoader
+            topic="Running exploratory data analysis..."
+            description="This may take up to 1 minute depending on your dataset."
+          />
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="word-freq">
+                <BarChart2 className="h-4 w-4 mr-1" /> Word Frequency
+              </TabsTrigger>
+              <TabsTrigger value="word-cloud">
+                <BarChart2 className="h-4 w-4 mr-1" /> Word Cloud
+              </TabsTrigger>
+              <TabsTrigger value="ngrams">
+                <Hash className="h-4 w-4 mr-1" /> N-grams
+              </TabsTrigger>
+              <TabsTrigger value="length">
+                <Clock className="h-4 w-4 mr-1" /> Word Length
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="word-freq" className="pt-6">
+              <h3 className="text-sm font-medium mb-1">
+                Top 20 Most Frequent Words
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                This chart shows the most common words in your reviews. Words
+                that appear more often may highlight key themes or repetitive
+                feedback from users.
+              </p>
+              {renderVerticalBar(
+                data.top_20_frequent_words,
+                "word",
+                wordFreqRef,
+                0
+              )}
+              <CollapsibleInfoBox title="📌 Why analyze frequent words?">
+                <p className="mb-2">
+                  Analyzing the most frequent words helps you quickly identify
+                  what people are talking about the most.
+                </p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li>Gives an overview of dominant themes</li>
+                  <li>
+                    Guides downstream tasks like topic modeling or sentiment
+                  </li>
+                </ul>
+              </CollapsibleInfoBox>
+            </TabsContent>
+
+            <TabsContent value="word-cloud" className="pt-6">
+              <h3 className="text-sm font-medium mb-3">Word Cloud</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                The word cloud provides a visual snapshot of word frequency.
+                Larger words indicate higher frequency, helping users spot
+                trends at a glance.
+              </p>
+              <div ref={cloudRef} className="h-[360px]">
+                <WordCloud
+                  words={data.full_wordcloud}
+                  options={{
+                    rotations: 2,
+                    rotationAngles: [0, 90],
+                    fontSizes: [12, 40],
+                  }}
+                />
+              </div>
+              <div className="mt-2 text-right">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => exportAsImage(cloudRef, "word-cloud")}
+                >
+                  {" "}
+                  <Download className="w-4 h-4 mr-1" /> Export Word Cloud{" "}
+                </Button>
+              </div>
+              <CollapsibleInfoBox title="📌 What is a Word Cloud good for?">
+                <p>
+                  Word clouds give a quick, intuitive glimpse of what dominates
+                  the text. They’re great for presentations or overviews, but
+                  shouldn’t replace deeper analysis.
+                </p>
+              </CollapsibleInfoBox>
+            </TabsContent>
+
+            <TabsContent value="ngrams" className="pt-6">
+              <h3 className="text-sm font-medium mb-3">
+                Top Bigrams and Trigrams
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                N-grams highlight commonly co-occurring words that may represent
+                meaningful phrases. Analyzing them helps uncover themes in user
+                expression.
+              </p>
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <h4 className="text-xs text-muted-foreground mb-2">
+                    Top Bigrams
+                  </h4>
+                  {renderVerticalBar(data.bigrams, "bigram", bigramRef, 1)}
+                </div>
+                <div>
+                  <h4 className="text-xs text-muted-foreground mb-2">
+                    Top Trigrams
+                  </h4>
+                  {renderVerticalBar(data.trigrams, "trigram", trigramRef, 2)}
+                </div>
+              </div>
+              <CollapsibleInfoBox title="📌 Why analyze N-grams?">
+                <p className="mb-2">
+                  N-grams help capture context that single words can’t.
+                </p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li>Reveal recurring phrases and patterns</li>
+                  <li>Improve performance in classification and search</li>
+                  <li>Useful in feature engineering for ML tasks</li>
+                </ul>
+              </CollapsibleInfoBox>
+            </TabsContent>
+
+            <TabsContent value="length" className="pt-6">
+              <h3 className="text-sm font-medium mb-3">
+                Word Length Distribution
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                This chart shows how long words typically are in your data.
+                Short words dominate casual reviews, while long words may signal
+                more technical or detailed language.
+              </p>
+              <div ref={lengthRef}>
+                <ResponsiveContainer width="100%" height={360}>
+                  <BarChart
+                    data={data.bucketed_length_data}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="bucket"
+                      label={{
+                        value: "Word Length",
+                        position: "insideBottom",
+                        offset: -5,
+                      }}
+                    />
+                    <YAxis
+                      label={{
+                        value: "Count",
+                        angle: -90,
+                        position: "insideLeft",
+                      }}
+                    />
+                    <Tooltip />
+                    <Bar
                       dataKey="count"
-                      nameKey="word"
-                      label={({ word, percent }) => `${word} (${(percent * 100).toFixed(0)}%)`}
+                      isAnimationActive
+                      animationDuration={800}
+                      fill="#2C5282"
                     >
-                      {wordFreqData.slice(0, 8).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      {data.bucketed_length_data.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
-                    </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} occurrences`, name]} />
-                    <Legend />
-                  </PieChart>
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="ngrams" className="pt-4">
-            <h3 className="text-sm font-medium mb-4">Top 15 Most Common Bigrams (Two-Word Combinations)</h3>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={bigramData} layout="vertical" margin={{ top: 5, right: 30, left: 140, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="bigram" type="category" width={140} />
-                  <Tooltip formatter={(value) => [`${value} occurrences`, 'Frequency']} />
-                  <Bar dataKey="count" fill="#4FD1C5">
-                    {bigramData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-sm text-muted-foreground mt-4">
-              Bigrams help identify common phrases and patterns in your reviews. These combinations often reveal specific aspects or features being mentioned together.
-            </p>
-          </TabsContent>
-          
-          <TabsContent value="word-length" className="pt-4">
-            <h3 className="text-sm font-medium mb-4">Word Length Distribution</h3>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={wordLengthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="length" label={{ value: 'Word Length (characters)', position: 'insideBottom', offset: -5 }} />
-                  <YAxis label={{ value: 'Number of Words', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip formatter={(value, name, props) => [`${value} words`, `Length: ${props.payload.length} chars`]} />
-                  <Bar dataKey="count" fill="#2C5282">
-                    {wordLengthData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-sm text-muted-foreground mt-4">
-              Word length distribution can indicate the complexity of language used in reviews. Shorter words are typically more common, while specialized terminology tends to be longer.
-            </p>
-          </TabsContent>
-        </Tabs>
+              <div className="mt-2 text-right">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => exportAsImage(lengthRef, "word-length")}
+                >
+                  <Download className="w-4 h-4 mr-1" /> Export Word Length
+                </Button>
+              </div>
+              <CollapsibleInfoBox title="📌 Why is Word Length important?">
+                <p>
+                  Word length can help estimate language style and complexity.
+                </p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li>Shorter words suggest simpler, casual tone</li>
+                  <li>
+                    Longer words may indicate formal or domain-specific content
+                  </li>
+                </ul>
+              </CollapsibleInfoBox>
+            </TabsContent>
+          </Tabs>
+        )}
       </CardContent>
+
       <CardFooter className="flex justify-end">
-        <Button onClick={handleComplete}>Complete & Continue</Button>
+        <Button onClick={onStepComplete}>Complete & Continue</Button>
       </CardFooter>
     </Card>
   );
-};
-
-export default DataExplorationStep;
+}

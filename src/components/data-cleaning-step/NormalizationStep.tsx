@@ -23,10 +23,12 @@ export default function NormalizationStep({
   fileId,
   description,
   badges,
+  refetchStatus,
 }: {
   fileId: string;
   description: string;
   badges: Badges[];
+  refetchStatus: () => void;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -81,6 +83,7 @@ export default function NormalizationStep({
 
     try {
       await applyBrokenMap(map);
+
       dismiss(); // close the loading toast
 
       toast({
@@ -93,6 +96,8 @@ export default function NormalizationStep({
         ),
         duration: 4000,
       });
+
+      await refetchStatus();
     } catch (err: any) {
       dismiss();
       toast({

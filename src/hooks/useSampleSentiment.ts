@@ -25,17 +25,20 @@ type SampleDataUrl = {
   s3_url: string;
 };
 
-export const useSampleSentiment = (enabled: boolean) => {
+export const useSentimentResult = (fileId: string | null) => {
   return useQuery<SentimentResults>({
-    queryKey: ["sample-sentiment"],
+    queryKey: ["sentiment-result", fileId],
     queryFn: async () => {
       const res = await axios.get<{ data: SentimentResults }>(
-        ENDPOINTS.SAMPLE_SENTIMENT
+        `${ENDPOINTS.SENTIMENT_RESULT}`,
+        {
+          params: { file_id: fileId },
+        }
       );
       return res.data.data;
     },
-    enabled,
-    staleTime: 5 * 60 * 1000, // cache for 5 minutes
+    enabled: !!fileId,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

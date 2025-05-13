@@ -21,10 +21,12 @@ export default function LemmatizationStep({
   fileId,
   description,
   badges,
+  refetchStatus,
 }: {
   fileId: string;
   description: string;
   badges: BadgeItem[];
+  refetchStatus: () => void;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -73,6 +75,8 @@ export default function LemmatizationStep({
         ),
         duration: 4000,
       });
+
+      await refetchStatus();
     } catch (err: any) {
       console.error("❌ Lemmatization failed:", err);
       dismiss();

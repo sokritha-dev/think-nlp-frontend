@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import BeforeAfterTextLoader from "@/components/loaders/BeforeAfterTextLoader";
@@ -22,10 +22,12 @@ export default function TokenizationStep({
   fileId,
   description,
   badges,
+  refetchStatus,
 }: {
   fileId: string;
   description: string;
   badges: BadgeItem[];
+  refetchStatus: () => void;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -66,6 +68,7 @@ export default function TokenizationStep({
 
     try {
       await regenerate();
+
       dismiss();
 
       toast({
@@ -78,6 +81,8 @@ export default function TokenizationStep({
         ),
         duration: 4000,
       });
+
+      await refetchStatus();
     } catch (err: any) {
       console.error("❌ Tokenization failed:", err);
       dismiss();

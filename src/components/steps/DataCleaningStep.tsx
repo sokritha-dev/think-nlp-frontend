@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import SpecialCharRemovalStep from "@/components/data-cleaning-step/SpecialChars
 import TokenizationStep from "@/components/data-cleaning-step/TokenizationStep";
 import StopwordRemovalStep from "@/components/data-cleaning-step/StopwordRemovalStep";
 import LemmatizationStep from "@/components/data-cleaning-step/LemmatizationStep";
+import { useCleaningStatus } from "@/hooks/useCleaningStatus";
 
 const CLEANING_STEPS = [
   {
@@ -25,7 +26,6 @@ const CLEANING_STEPS = [
         label: "Unicode NFKC",
         tip: "Standardizes visually similar characters (like full-width 'Ａ' to normal 'A') and combines characters (like 'e' + accent to 'é') into a consistent format for easier processing.",
       },
-
       {
         label: "Contractions",
         tip: "Expands shortened words like “don’t” to “do not” to preserve meaning in analysis.",
@@ -115,9 +115,23 @@ export default function DataCleaningStep({
   onStepComplete: () => void;
 }) {
   const [processStage, setProcessStage] = useState(0);
-
   const currentStep = CLEANING_STEPS[processStage];
   const StepComponent = currentStep.component;
+
+  const { data: statusData, refetch } = useCleaningStatus(fileId, true);
+
+  const recomputeStates = useMemo(() => {
+    return (
+      statusData?.steps.map((step) => step.should_recompute) ??
+      Array(CLEANING_STEPS.length).fill(false)
+    );
+  }, [statusData]);
+
+  const canProceedToNextStep = useMemo(() => {
+    return (
+      statusData?.steps.every((s) => s.should_recompute === false) ?? false
+    );
+  }, [statusData]);
 
   return (
     <Card className="animate-fade-in">
@@ -140,38 +154,53 @@ export default function DataCleaningStep({
       <CardContent>
         {/* Step Navigation */}
         <div className="flex flex-wrap items-center gap-2 mb-6">
-          {CLEANING_STEPS.map((step, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <button
-                onClick={() => setProcessStage(index)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium
-                  transition border focus:outline-none
-                  ${
-                    index === processStage
-                      ? "bg-nlp-blue text-white border-nlp-blue"
-                      : "bg-muted text-muted-foreground border-border opacity-60"
-                  }`}
-              >
-                <span>{index < processStage ? "✅" : step.icon}</span>
-                <span>{step.name}</span>
-              </button>
-              {index < CLEANING_STEPS.length - 1 && (
-                <span className="text-muted-foreground text-xl">→</span>
-              )}
-            </div>
-          ))}
+          {CLEANING_STEPS.map((step, index) => {
+            const firstRecomputeIndex = recomputeStates.findIndex(
+              (v) => v === true
+            );
+            const isBlocked =
+              firstRecomputeIndex !== -1 && index > firstRecomputeIndex;
+
+            return (
+              <div key={index} className="flex items-center gap-2">
+                <button
+                  disabled={isBlocked}
+                  onClick={() => {
+                    if (!isBlocked) setProcessStage(index);
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition border focus:outline-none
+                    ${
+                      index === processStage
+                        ? "bg-nlp-blue text-white border-nlp-blue"
+                        : isBlocked
+                        ? "bg-muted text-muted-foreground border-border opacity-30 cursor-not-allowed"
+                        : "bg-muted text-muted-foreground border-border opacity-60"
+                    }`}
+                >
+                  <span>{index < processStage ? "✅" : step.icon}</span>
+                  <span>{step.name}</span>
+                </button>
+                {index < CLEANING_STEPS.length - 1 && (
+                  <span className="text-muted-foreground text-xl">→</span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Render current step component */}
+        {/* Step Body */}
         <StepComponent
           fileId={fileId}
           badges={currentStep.badges}
           description={currentStep.description}
+          refetchStatus={refetch}
         />
       </CardContent>
 
       <CardFooter className="flex justify-end">
-        <Button onClick={onStepComplete}>Complete & Continue</Button>
+        <Button onClick={onStepComplete} disabled={!canProceedToNextStep}>
+          Complete & Continue
+        </Button>
       </CardFooter>
     </Card>
   );

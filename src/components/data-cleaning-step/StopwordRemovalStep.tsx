@@ -22,10 +22,12 @@ export default function StopwordRemovalStep({
   fileId,
   description,
   badges,
+  refetchStatus,
 }: {
   fileId: string;
   description: string;
   badges: BadgeItem[];
+  refetchStatus: () => void;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -88,6 +90,7 @@ export default function StopwordRemovalStep({
 
     try {
       await applyStopwordRemoval();
+
       dismiss();
 
       toast({
@@ -100,6 +103,8 @@ export default function StopwordRemovalStep({
         ),
         duration: 4000,
       });
+
+      await refetchStatus();
     } catch (error: any) {
       console.error("❌ Stopword removal failed:", error);
       dismiss();
