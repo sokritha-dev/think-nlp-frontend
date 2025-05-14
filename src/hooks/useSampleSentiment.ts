@@ -48,7 +48,10 @@ export const useSampleData = () => {
     enabled: false, // 🔹 only fetch when refetch is called
     queryFn: async () => {
       const s3UrlResponse = await axios.get<{ data: SampleDataUrl }>(
-        ENDPOINTS.SAMPLE_DATA_URL
+        ENDPOINTS.SAMPLE_DATA_URL,
+        {
+          params: { file_id: "7b2d4440-9073-4c01-ad61-a0b566d78c9d" },
+        }
       );
       const response = await axios.get(s3UrlResponse.data.data.s3_url);
 

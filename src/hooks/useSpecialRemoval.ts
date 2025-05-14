@@ -1,5 +1,5 @@
 // src/hooks/useSpecialCleanedReviews.ts
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { ENDPOINTS } from "@/constants/api";
 
@@ -29,8 +29,11 @@ export const useSpecialRemovalReviews = (
   page: number = 1,
   pageSize: number = 20
 ) => {
+  const queryClient = useQueryClient();
+  const queryKey = ["special-clean", fileId, page, pageSize];
+
   const query = useQuery<SpecialRemovalResult>({
-    queryKey: ["special-clean", fileId, page, pageSize],
+    queryKey,
     queryFn: async () => {
       const res = await axios.get(ENDPOINTS.SPECIAL_REMOVAL, {
         params: { file_id: fileId, page, page_size: pageSize },
@@ -62,8 +65,14 @@ export const useSpecialRemovalReviews = (
         should_recompute: res.data.data.should_recompute,
       };
     },
-    onSuccess: () => {
-      query.refetch();
+    onSuccess: (updatedData) => {
+      // 1. Instantly update the UI
+      queryClient.setQueryData(queryKey, updatedData);
+
+      // 2. Optionally mark it stale in background
+      queryClient.invalidateQueries({
+        queryKey,
+      });
     },
   });
 

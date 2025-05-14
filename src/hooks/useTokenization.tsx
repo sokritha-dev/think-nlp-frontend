@@ -8,6 +8,7 @@ export const useTokenizedReviews = (
   pageSize: number
 ) => {
   const queryClient = useQueryClient();
+
   const queryKey = ["tokenized-reviews", fileId, page];
 
   const { data, isLoading, refetch } = useQuery({
@@ -25,7 +26,6 @@ export const useTokenizedReviews = (
       };
     },
     enabled: !!fileId,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { mutateAsync: regenerate, isPending: isRegenerating } = useMutation({
@@ -33,8 +33,16 @@ export const useTokenizedReviews = (
       const res = await axios.post(ENDPOINTS.TOKENIZE, { file_id: fileId });
       return res.data.data;
     },
-    onSuccess: () => {
-      refetch();
+    onSuccess: (updatedData) => {
+      // refetch();
+
+      // 1. Instantly update the UI
+      queryClient.setQueryData(queryKey, updatedData);
+
+      // 2. Optionally mark it stale in background
+      queryClient.invalidateQueries({
+        queryKey,
+      });
     },
   });
 

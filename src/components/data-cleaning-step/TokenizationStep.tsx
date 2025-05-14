@@ -157,9 +157,7 @@ export default function TokenizationStep({
       {/* =============== Input & Output Text ================ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 rounded-xl p-5 h-80 overflow-y-auto border border-border shadow-sm">
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground">
-            Original
-          </h4>
+          <h4 className="text-sm font-medium text-muted-foreground">Before</h4>
           <div className="space-y-1">
             {before.map((b: string, i: number) => (
               <div

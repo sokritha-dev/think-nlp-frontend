@@ -28,14 +28,11 @@ import { SentimentByTopicChart } from "@/components/sentiment-charts/SentimentBy
 import TextLoader from "@/components/loaders/TextLoader";
 import html2canvas from "html2canvas";
 
-export default function SentimentAnalysisStep({
-  onStepComplete,
-}) {
+export default function SentimentAnalysisStep({ onStepComplete }) {
   const searchParams = new URLSearchParams(window.location.search);
   const topicModelId = searchParams.get("topic_model_id");
   const chartRef = useRef(null);
   const [algorithm, setAlgorithm] = useState("vader");
-  const [shouldRecompute, setShouldRecompute] = useState(false);
 
   const {
     data,
@@ -46,12 +43,6 @@ export default function SentimentAnalysisStep({
     shouldRecompute: needRecompute,
     notFound,
   } = useSentimentAnalysis({ topicModelId, algorithm });
-
-  useEffect(() => {
-    if (data && "should_recompute" in data) {
-      setShouldRecompute(needRecompute);
-    }
-  }, [data]);
 
   const handleRun = () => {
     runAnalysis();
@@ -114,6 +105,13 @@ export default function SentimentAnalysisStep({
           </Collapsible>
         </div>
 
+        {needRecompute && (
+          <div className="text-sm text-yellow-600 bg-yellow-50 border border-yellow-300 p-3 rounded-md mb-4">
+            ⚠️ You made changes in a previous cleaning step. Please rerun the
+            sentiment analysis to reflect the latest modified data.
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div>
             <Select value={algorithm} onValueChange={setAlgorithm}>
@@ -136,15 +134,9 @@ export default function SentimentAnalysisStep({
             </p>
           </div>
           <div>
-            {(shouldRecompute || isError) && (
-              <Button
-                className="w-full"
-                onClick={handleRun}
-                disabled={isRunning}
-              >
-                {isRunning ? "Analyzing..." : "Run Sentiment Analysis"}
-              </Button>
-            )}
+            <Button className="w-full" onClick={handleRun} disabled={isRunning}>
+              {isRunning ? "Analyzing..." : "Run Sentiment Analysis"}
+            </Button>
           </div>
         </div>
 
@@ -170,7 +162,7 @@ export default function SentimentAnalysisStep({
             </div>
             <Button
               variant="outline"
-              className="ml-auto mb-4 self-end"
+              className="ml-auto my-4 self-end"
               onClick={async () => {
                 if (chartRef.current) {
                   const canvas = await html2canvas(chartRef.current);

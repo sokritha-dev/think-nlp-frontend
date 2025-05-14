@@ -12,6 +12,7 @@ export const useStopwordRemoval = (
   }
 ) => {
   const queryClient = useQueryClient();
+
   const queryKey = ["stopword-removal", fileId, page];
 
   const { data, isLoading, refetch } = useQuery({
@@ -35,7 +36,6 @@ export const useStopwordRemoval = (
       };
     },
     enabled: !!fileId,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { mutateAsync: applyStopwordRemoval, isPending: isApplying } =
@@ -48,9 +48,14 @@ export const useStopwordRemoval = (
         });
         return res.data.data;
       },
-      onSuccess: (newData) => {
-        // Instantly update cache so UI reflects the change
-        queryClient.setQueryData(queryKey, newData);
+      onSuccess: (updatedData) => {
+        // 1. Instantly update the UI
+        queryClient.setQueryData(queryKey, updatedData);
+
+        // 2. Optionally mark it stale in background
+        queryClient.invalidateQueries({
+          queryKey,
+        });
       },
     });
 

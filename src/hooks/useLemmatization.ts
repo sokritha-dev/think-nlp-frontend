@@ -26,7 +26,6 @@ export const useLemmatization = (
       };
     },
     enabled: !!fileId,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { mutateAsync: applyLemmatization, isPending: isApplying } =
@@ -37,9 +36,14 @@ export const useLemmatization = (
         });
         return res.data.data;
       },
-      onSuccess: () => {
-        refetch();
-        queryClient.invalidateQueries({ queryKey });
+      onSuccess: (updatedData) => {
+        // 1. Instantly update the UI
+        queryClient.setQueryData(queryKey, updatedData);
+
+        // 2. Optionally mark it stale in background
+        queryClient.invalidateQueries({
+          queryKey,
+        });
       },
     });
 

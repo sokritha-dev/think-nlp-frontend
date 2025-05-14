@@ -212,7 +212,13 @@ const FileUpload = ({
                           setShowSampleDialog(true);
                           try {
                             const res = await axios.get(
-                              ENDPOINTS.SAMPLE_DATA_URL
+                              ENDPOINTS.SAMPLE_DATA_URL,
+                              {
+                                params: {
+                                  file_id:
+                                    "7b2d4440-9073-4c01-ad61-a0b566d78c9d",
+                                },
+                              }
                             );
                             setSampleUrl(res.data.data.s3_url);
                           } catch (err) {

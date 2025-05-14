@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { ENDPOINTS } from "@/constants/api";
 
@@ -16,8 +16,11 @@ export const useNormalizedReviews = (
   page: number = 1,
   pageSize: number = 20
 ) => {
+  const queryClient = useQueryClient();
+  const queryKey = ["normalized", fileId, page, pageSize];
+
   const query = useQuery({
-    queryKey: ["normalized", fileId, page, pageSize],
+    queryKey,
     queryFn: async () => {
       const res = await axios.get(`${ENDPOINTS.NORMALIZATION}`, {
         params: {
@@ -55,8 +58,14 @@ export const useNormalizedReviews = (
         should_recompute: res.data.data.should_recompute,
       };
     },
-    onSuccess: () => {
-      query.refetch();
+    onSuccess: (updatedData) => {
+      // 1. Instantly update the UI
+      queryClient.setQueryData(queryKey, updatedData);
+
+      // 2. Optionally mark it stale in background
+      queryClient.invalidateQueries({
+        queryKey,
+      });
     },
   });
 
