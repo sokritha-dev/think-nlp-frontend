@@ -197,7 +197,11 @@ export default function SpecialCharRemovalStep({
           <h4 className="text-sm font-medium text-nlp-blue">After</h4>
           <div className="space-y-1">
             {isApplying ? (
-              <BeforeAfterTextLoader numberLoader={1} />
+              <>
+                {[...Array(10)].map((_, i) => (
+                  <BeforeAfterTextLoader numberLoader={1} key={i} />
+                ))}
+              </>
             ) : (
               after.map((a, i) => (
                 <div

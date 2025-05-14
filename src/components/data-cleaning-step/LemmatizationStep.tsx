@@ -156,10 +156,14 @@ export default function LemmatizationStep({
           </div>
         </div>
         <div>
-          <h4 className="text-sm font-medium text-nlp-blue">Lemmatized</h4>
+          <h4 className="text-sm font-medium text-nlp-blue">After</h4>
           <div className="space-y-1">
             {isApplying ? (
-              <BeforeAfterTextLoader numberLoader={1} />
+              <>
+                {[...Array(10)].map((_, i) => (
+                  <BeforeAfterTextLoader numberLoader={1} key={i} />
+                ))}
+              </>
             ) : (
               after.map((tokens: string[], i: number) => (
                 <div

@@ -172,10 +172,14 @@ export default function TokenizationStep({
           </div>
         </div>
         <div>
-          <h4 className="text-sm font-medium text-nlp-blue">Tokens</h4>
+          <h4 className="text-sm font-medium text-nlp-blue">After</h4>
           <div className="space-y-1">
             {isRegenerating ? (
-              <BeforeAfterTextLoader numberLoader={1} />
+              <>
+                {[...Array(10)].map((_, i) => (
+                  <BeforeAfterTextLoader numberLoader={1} key={i} />
+                ))}
+              </>
             ) : (
               after.map((tokens: string[], i: number) => (
                 <div
