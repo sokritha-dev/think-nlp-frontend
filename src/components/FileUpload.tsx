@@ -215,8 +215,8 @@ const FileUpload = ({
                               ENDPOINTS.SAMPLE_DATA_URL,
                               {
                                 params: {
-                                  file_id:
-                                    "7b2d4440-9073-4c01-ad61-a0b566d78c9d",
+                                  file_id: import.meta.env
+                                    .VITE_SAMPLE_FILE_DOWNLOAD,
                                 },
                               }
                             );

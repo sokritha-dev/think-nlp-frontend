@@ -43,7 +43,7 @@ const Index = () => {
     refetch,
   } = useSentimentResult(
     useSample
-      ? "3ce5447e-18e4-4b1f-a893-3259ea1d961a"
+      ? import.meta.env.VITE_SAMPLE_FILE_ID
       : userSentimentResult?.file_id || fileId
   );
 
