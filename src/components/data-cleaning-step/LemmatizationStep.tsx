@@ -22,11 +22,13 @@ export default function LemmatizationStep({
   description,
   badges,
   refetchStatus,
+  isSample,
 }: {
   fileId: string;
   description: string;
   badges: BadgeItem[];
   refetchStatus: () => void;
+  isSample;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -115,14 +117,25 @@ export default function LemmatizationStep({
         )}
 
         <div className="flex gap-1">
-          <Button
-            size="sm"
-            className="text-xs w-full"
-            disabled={isApplying}
-            onClick={handleApply}
-          >
-            {isApplying ? "Lemmatizing..." : "Apply Lemmatization"}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <Button
+                  size="sm"
+                  className="text-xs w-full"
+                  onClick={handleApply}
+                  disabled={isApplying || isSample}
+                >
+                  {isApplying ? "Lemmatizing..." : "Apply Lemmatization"}
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {isSample && (
+              <TooltipContent>
+                This is sample data. You can't apply lemmatization here.
+              </TooltipContent>
+            )}
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>

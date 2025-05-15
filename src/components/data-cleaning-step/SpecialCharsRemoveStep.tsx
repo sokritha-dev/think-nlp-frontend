@@ -24,11 +24,13 @@ export default function SpecialCharRemovalStep({
   description,
   badges,
   refetchStatus,
+  isSample,
 }: {
   fileId: string;
   description: string;
   badges: Badges[];
   refetchStatus: () => void;
+  isSample: boolean;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -134,33 +136,54 @@ export default function SpecialCharRemovalStep({
             Select cleaning options:
           </label>
           <div className="flex items-center gap-4">
-            {["remove_special", "remove_numbers", "remove_emoji"].map((key) => (
-              <label className="text-sm" key={key}>
-                <input
-                  type="checkbox"
-                  checked={flags[key as keyof typeof flags]}
-                  onChange={() =>
-                    setFlags((f) => ({
-                      ...f,
-                      [key]: !f[key as keyof typeof flags],
-                    }))
-                  }
-                />{" "}
-                {key.replace("remove_", "Remove ")}
-              </label>
+            {[
+              { key: "remove_special", label: "Remove Special" },
+              { key: "remove_numbers", label: "Remove Numbers" },
+              { key: "remove_emoji", label: "Remove Emoji" },
+            ].map(({ key, label }) => (
+              <Tooltip key={key}>
+                <TooltipTrigger asChild>
+                  <label className="text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={flags[key as keyof typeof flags]}
+                      onChange={() =>
+                        setFlags((f) => ({
+                          ...f,
+                          [key]: !f[key as keyof typeof flags],
+                        }))
+                      }
+                      disabled={isSample}
+                    />{" "}
+                    {label}
+                  </label>
+                </TooltipTrigger>
+                {isSample && (
+                  <TooltipContent>Disabled for sample data.</TooltipContent>
+                )}
+              </Tooltip>
             ))}
           </div>
         </div>
 
         <div className="flex gap-1">
-          <Button
-            size="sm"
-            className="text-xs w-full"
-            onClick={handleApply}
-            disabled={isApplying}
-          >
-            {isApplying ? "Applying..." : "Apply Changes"}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                className="text-xs w-full"
+                onClick={handleApply}
+                disabled={isApplying || isSample}
+              >
+                {isApplying ? "Applying..." : "Apply Changes"}
+              </Button>
+            </TooltipTrigger>
+            {isSample && (
+              <TooltipContent>
+                You cannot apply changes to sample data.
+              </TooltipContent>
+            )}
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>

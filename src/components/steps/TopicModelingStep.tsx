@@ -21,8 +21,17 @@ import {
 } from "@/components/ui/collapsible";
 import TextLoader from "@/components/loaders/TextLoader";
 import { useNumTopics } from "@/hooks/useNumTopics";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export default function TopicModelingStep({ fileId, onStepComplete }) {
+export default function TopicModelingStep({
+  fileId,
+  onStepComplete,
+  isSample,
+}) {
   const [numTopics, setNumTopics] = useNumTopics();
   const [autoSelect, setAutoSelect] = useState(false);
 
@@ -50,9 +59,7 @@ export default function TopicModelingStep({ fileId, onStepComplete }) {
   });
 
   useEffect(() => {
-    if (fileId) {
-      runTopicModeling();
-    }
+    if (fileId) runTopicModeling();
   }, [fileId, autoSelect, numTopics]);
 
   return (
@@ -73,6 +80,7 @@ export default function TopicModelingStep({ fileId, onStepComplete }) {
           </Badge>
         </div>
       </CardHeader>
+
       <CardContent>
         <div className="nlp-explanation mb-6">
           <div className="flex gap-2 items-start mb-2">
@@ -87,14 +95,13 @@ export default function TopicModelingStep({ fileId, onStepComplete }) {
           </p>
           <ul className="list-disc list-inside space-y-1 pl-4">
             <li>
-              It identifies patterns of word co-occurrence that represent themes
+              Identifies patterns of word co-occurrence that represent themes
             </li>
             <li>
               Each document can contain multiple topics in different proportions
             </li>
             <li>
-              Common algorithms include LDA (Latent Dirichlet Allocation), NMF,
-              and BERT-based approaches
+              Common algorithms include LDA, NMF, and BERT-based approaches
             </li>
             <li>Requires specifying the number of topics to identify</li>
           </ul>
@@ -133,17 +140,29 @@ export default function TopicModelingStep({ fileId, onStepComplete }) {
 
             {!autoSelect && (
               <div className="space-y-2">
-                <Slider
-                  value={[numTopics || 4]}
-                  min={2}
-                  max={10}
-                  step={1}
-                  onValueChange={(val) => {
-                    setAutoSelect(false);
-                    setNumTopics(val[0]);
-                  }}
-                  className="w-full"
-                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Slider
+                        value={[numTopics || 4]}
+                        min={2}
+                        max={10}
+                        step={1}
+                        onValueChange={(val) => {
+                          setAutoSelect(false);
+                          setNumTopics(val[0]);
+                        }}
+                        className="w-full"
+                        disabled={isSample}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  {isSample && (
+                    <TooltipContent>
+                      Sample mode — changing number of topics is disabled.
+                    </TooltipContent>
+                  )}
+                </Tooltip>
                 <p className="text-xs text-muted-foreground">
                   Choose how many distinct topics to extract from your reviews.
                 </p>
@@ -154,13 +173,23 @@ export default function TopicModelingStep({ fileId, onStepComplete }) {
               <span className="text-xs text-muted-foreground">
                 Automatically choose best number of topics?
               </span>
-              <Button
-                variant={autoSelect ? "default" : "outline"}
-                size="sm"
-                onClick={() => setAutoSelect(!autoSelect)}
-              >
-                {autoSelect ? "Auto: ON" : "Auto: OFF"}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={autoSelect ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAutoSelect(!autoSelect)}
+                    disabled={isSample}
+                  >
+                    {autoSelect ? "Auto: ON" : "Auto: OFF"}
+                  </Button>
+                </TooltipTrigger>
+                {isSample && (
+                  <TooltipContent>
+                    Sample mode — auto toggle is locked.
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </div>
           </div>
 
@@ -175,7 +204,7 @@ export default function TopicModelingStep({ fileId, onStepComplete }) {
             <div className="mt-6">
               <h3 className="text-sm font-medium mb-2">Detected Topics</h3>
               <ul className="space-y-2 text-sm">
-                {data.topics.map((topic, idx) => (
+                {data.topics.map((topic) => (
                   <li
                     key={topic.topic_id}
                     className="p-3 border border-muted rounded bg-muted/30"
@@ -189,6 +218,7 @@ export default function TopicModelingStep({ fileId, onStepComplete }) {
           )}
         </div>
       </CardContent>
+
       <CardFooter className="flex justify-end">
         <Button onClick={onStepComplete} disabled={!isSuccess}>
           Complete & Continue

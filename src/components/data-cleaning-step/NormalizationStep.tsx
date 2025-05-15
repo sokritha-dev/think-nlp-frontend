@@ -24,11 +24,13 @@ export default function NormalizationStep({
   description,
   badges,
   refetchStatus,
+  isSample,
 }: {
   fileId: string;
   description: string;
   badges: Badges[];
   refetchStatus: () => void;
+  isSample: boolean;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -84,7 +86,7 @@ export default function NormalizationStep({
     try {
       await applyBrokenMap(map);
 
-      dismiss(); // close the loading toast
+      dismiss();
 
       toast({
         title: "Normalization has been updated.",
@@ -125,25 +127,44 @@ export default function NormalizationStep({
         <TechniqueBadgeSection title="Techniques used:" badges={badges} />
       )}
 
-      {/* =============== Parameters ================ */}
       <div className="space-y-2 mb-4">
         <label className="text-xs text-muted-foreground font-medium">
           Broken Word Map (e.g., worng=wrong, becuse=because)
         </label>
-        <input
-          className="border px-3 py-1 rounded-md text-sm w-full"
-          value={inputMap}
-          onChange={(e) => setInputMap(e.target.value)}
-        />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <input
+              className="border px-3 py-1 rounded-md text-sm w-full"
+              value={inputMap}
+              onChange={(e) => setInputMap(e.target.value)}
+              disabled={isSample}
+            />
+          </TooltipTrigger>
+          {isSample && (
+            <TooltipContent side="top">
+              Editing is disabled for sample data
+            </TooltipContent>
+          )}
+        </Tooltip>
+
         <div className="flex gap-1">
-          <Button
-            size="sm"
-            className="text-xs w-full flex-1"
-            onClick={handleApply}
-            disabled={isApplying}
-          >
-            {isApplying ? "Applying..." : "Apply Changes"}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                className="text-xs w-full flex-1"
+                onClick={handleApply}
+                disabled={isApplying || isSample}
+              >
+                {isApplying ? "Applying..." : "Apply Changes"}
+              </Button>
+            </TooltipTrigger>
+            {isSample && (
+              <TooltipContent side="top">
+                Cannot apply changes to sample data
+              </TooltipContent>
+            )}
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -156,12 +177,13 @@ export default function NormalizationStep({
                 <Download className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Download as CSV</TooltipContent>
+            <TooltipContent side="top">
+              Download disabled for sample data
+            </TooltipContent>
           </Tooltip>
         </div>
       </div>
 
-      {/* =============== Input & Output Text ================ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 rounded-xl p-5 h-80 overflow-y-auto border border-border shadow-sm">
         <div>
           <h4 className="text-sm font-medium text-muted-foreground">Before</h4>
@@ -199,7 +221,6 @@ export default function NormalizationStep({
         </div>
       </div>
 
-      {/* =============== Pagination ================ */}
       <div className="w-full flex justify-between items-center mt-4">
         <Button
           size="sm"

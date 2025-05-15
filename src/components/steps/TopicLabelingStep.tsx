@@ -14,8 +14,13 @@ import { Input } from "@/components/ui/input";
 import { useTopicLabeling } from "@/hooks/useTopicLabeling";
 import TextLoader from "@/components/loaders/TextLoader";
 import { useNumTopics } from "@/hooks/useNumTopics";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export default function TopicLabelingStep({ onStepComplete }) {
+export default function TopicLabelingStep({ onStepComplete, isSample }) {
   const [numTopics] = useNumTopics();
 
   const searchParams = new URLSearchParams(window.location.search);
@@ -53,18 +58,29 @@ export default function TopicLabelingStep({ onStepComplete }) {
     );
   }
 
-  const renderLabelMapInputs = () => (
+  const renderLabelMapInputs = ({ isSample }: { isSample: boolean }) => (
     <div className="space-y-3">
       <label className="text-sm font-medium block mb-1">
         Provide label map for each topic
       </label>
       {Array.from({ length: numTopics }).map((_, i) => (
-        <Input
-          key={`map-input-${i}`}
-          placeholder={`Label for topic_${i}`}
-          value={labelMap[i] || ""}
-          onChange={(e) => setLabelMap({ ...labelMap, [i]: e.target.value })}
-        />
+        <Tooltip key={`map-input-${i}`}>
+          <TooltipTrigger asChild>
+            <Input
+              placeholder={`Label for topic_${i}`}
+              value={labelMap[i] || ""}
+              disabled={isSample}
+              onChange={(e) =>
+                setLabelMap({ ...labelMap, [i]: e.target.value })
+              }
+            />
+          </TooltipTrigger>
+          {isSample && (
+            <TooltipContent>
+              Sample mode — manual label input disabled.
+            </TooltipContent>
+          )}
+        </Tooltip>
       ))}
     </div>
   );
@@ -147,27 +163,49 @@ export default function TopicLabelingStep({ onStepComplete }) {
               <label className="text-sm font-medium block mb-1">
                 Provide topic keywords (comma separated)
               </label>
-              <Input
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-                placeholder="e.g. Room, Staff, Booking Issues"
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input
+                    value={keywords}
+                    onChange={(e) => setKeywords(e.target.value)}
+                    placeholder="e.g. Room, Staff, Booking Issues"
+                    disabled={isSample}
+                  />
+                </TooltipTrigger>
+                {isSample && (
+                  <TooltipContent>
+                    Sample mode — keyword editing disabled.
+                  </TooltipContent>
+                )}
+              </Tooltip>
+
               <p className="text-xs text-muted-foreground mt-1">
                 We'll match each keyword to the topic it fits best.
               </p>
             </div>
           )}
 
-          {mode === "map" && renderLabelMapInputs()}
+          {mode === "map" && renderLabelMapInputs({ isSample })}
 
           <div className="flex">
-            <Button
-              className="w-full"
-              onClick={() => runLabeling()}
-              disabled={isPending}
-            >
-              {isPending ? "Labeling..." : "Run Topic Labeling"}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    className="w-full"
+                    onClick={() => runLabeling()}
+                    disabled={isPending || isSample}
+                  >
+                    {isPending ? "Labeling..." : "Run Topic Labeling"}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {isSample && (
+                <TooltipContent>
+                  This is sample data. Labeling is disabled for demo mode.
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
 
           {isPending && (

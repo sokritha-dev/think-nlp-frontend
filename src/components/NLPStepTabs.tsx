@@ -18,12 +18,15 @@ import SentimentAnalysisStep from "./steps/SentimentAnalysisStep";
 import Lottie from "lottie-react";
 import celebrationAnimation from "@/assets/lottie/congrats.json";
 import { Button } from "@/components/ui/button";
+import { useCheckFileStatus } from "@/hooks/useCheckFileStatus";
 
 type NLPStepTabsProps = {
   fileId: string | null;
 };
 
 const NLPStepTabs = ({ fileId }: NLPStepTabsProps) => {
+  const { data: isSample, isLoading: isSampleLoading } =
+    useCheckFileStatus(fileId);
   const [activeTab, setActiveTab] = useState("data-cleaning");
   const [showCongrats, setShowCongrats] = useState(false);
 
@@ -171,6 +174,7 @@ const NLPStepTabs = ({ fileId }: NLPStepTabsProps) => {
               <DataCleaningStep
                 fileId={fileId}
                 onStepComplete={handleCleanedData}
+                isSample={isSample}
               />
             </TabsContent>
 
@@ -185,6 +189,7 @@ const NLPStepTabs = ({ fileId }: NLPStepTabsProps) => {
                   completeStep("topic-modeling");
                   setActiveTab("topic-labeling");
                 }}
+                isSample={isSample}
               />
             </TabsContent>
 
@@ -194,6 +199,7 @@ const NLPStepTabs = ({ fileId }: NLPStepTabsProps) => {
                   completeStep("topic-labeling");
                   setActiveTab("sentiment-analysis");
                 }}
+                isSample={isSample}
               />
             </TabsContent>
 

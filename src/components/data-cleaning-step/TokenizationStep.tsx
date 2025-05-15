@@ -23,11 +23,13 @@ export default function TokenizationStep({
   description,
   badges,
   refetchStatus,
+  isSample,
 }: {
   fileId: string;
   description: string;
   badges: BadgeItem[];
   refetchStatus: () => void;
+  isSample: boolean;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -128,14 +130,28 @@ export default function TokenizationStep({
           }`}
         >
           {should_recompute && (
-            <Button
-              size="sm"
-              className="text-xs w-full"
-              disabled={isRegenerating}
-              onClick={handleRegenerate}
-            >
-              {isRegenerating ? "Regenerating..." : "Recompute Tokenization"}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    size="sm"
+                    className="text-xs w-full"
+                    disabled={isRegenerating || isSample}
+                    onClick={handleRegenerate}
+                  >
+                    {isRegenerating
+                      ? "Regenerating..."
+                      : "Recompute Tokenization"}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {isSample && (
+                <TooltipContent side="bottom">
+                  This is a sample file. You can't modify the tokenization
+                  process.
+                </TooltipContent>
+              )}
+            </Tooltip>
           )}
 
           <Tooltip>

@@ -110,9 +110,11 @@ const CLEANING_STEPS = [
 export default function DataCleaningStep({
   fileId,
   onStepComplete,
+  isSample,
 }: {
   fileId: string;
   onStepComplete: () => void;
+  isSample: boolean;
 }) {
   const [processStage, setProcessStage] = useState(0);
   const currentStep = CLEANING_STEPS[processStage];
@@ -194,6 +196,7 @@ export default function DataCleaningStep({
           badges={currentStep.badges}
           description={currentStep.description}
           refetchStatus={refetch}
+          isSample={isSample}
         />
       </CardContent>
 

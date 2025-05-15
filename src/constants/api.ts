@@ -17,4 +17,5 @@ export const ENDPOINTS = {
   TOPIC_LDA: `${API_BASE_URL}/api/topic/lda`,
   TOPIC_LABEL: `${API_BASE_URL}/api/topic/label`,
   SENTIMENT_ANALYSIS: `${API_BASE_URL}/api/sentiment/`,
+  STATUS_FILE: `${API_BASE_URL}/api/file/status`,
 };

@@ -23,11 +23,13 @@ export default function StopwordRemovalStep({
   description,
   badges,
   refetchStatus,
+  isSample,
 }: {
   fileId: string;
   description: string;
   badges: BadgeItem[];
   refetchStatus: () => void;
+  isSample: boolean;
 }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
@@ -145,53 +147,65 @@ export default function StopwordRemovalStep({
         )}
 
         <div className="flex flex-col gap-2">
-          <div className="w-full">
-            <label className="text-xs text-muted-foreground font-medium block mb-1">
-              Custom Stopwords (comma-separated)
-            </label>
-            <input
-              className="border px-3 py-1 rounded-md text-sm w-full"
-              placeholder="e.g., room,hotel,staff"
-              value={customStopwords}
-              onChange={(e) => setCustomStopwords(e.target.value)}
-            />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <input
+                  className="border px-3 py-1 rounded-md text-sm w-full"
+                  placeholder="e.g., room,hotel,staff"
+                  value={customStopwords}
+                  onChange={(e) => setCustomStopwords(e.target.value)}
+                  disabled={isSample}
+                />
+              </div>
+            </TooltipTrigger>
+            {isSample && (
+              <TooltipContent>
+                This is a sample file. Custom stopwords cannot be modified.
+              </TooltipContent>
+            )}
+          </Tooltip>
 
-          <div className="w-full">
-            <label className="text-xs text-muted-foreground font-medium block mb-1">
-              Exclude from NLTK Stopwords
-            </label>
-            <input
-              className="border px-3 py-1 rounded-md text-sm w-full"
-              placeholder="e.g., not,no,very"
-              value={excludeStopwords}
-              onChange={(e) => setExcludeStopwords(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              NLTK's default English stopwords will be removed — you can exclude
-              some (e.g., <code>not</code>, <code>very</code>) here to preserve
-              them.{" "}
-              <a
-                href="https://www.nltk.org/nltk_data/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline"
-              >
-                See NLTK stopwords
-              </a>
-            </p>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <input
+                  className="border px-3 py-1 rounded-md text-sm w-full"
+                  placeholder="e.g., not,no,very"
+                  value={excludeStopwords}
+                  onChange={(e) => setExcludeStopwords(e.target.value)}
+                  disabled={isSample}
+                />
+              </div>
+            </TooltipTrigger>
+            {isSample && (
+              <TooltipContent>
+                This is a sample file. Exclude list cannot be changed.
+              </TooltipContent>
+            )}
+          </Tooltip>
         </div>
 
         <div className="flex gap-1">
-          <Button
-            size="sm"
-            className="text-xs w-full"
-            onClick={handleApply}
-            disabled={isApplying}
-          >
-            {isApplying ? "Applying..." : "Apply Stopword Removal"}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <Button
+                  size="sm"
+                  className="text-xs w-full"
+                  onClick={handleApply}
+                  disabled={isApplying || isSample}
+                >
+                  {isApplying ? "Applying..." : "Apply Stopword Removal"}
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {isSample && (
+              <TooltipContent>
+                You can't update stopwords on sample data.
+              </TooltipContent>
+            )}
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
