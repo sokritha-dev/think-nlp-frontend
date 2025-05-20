@@ -1,6 +1,6 @@
 // src/constants/api.ts
 
-export const API_BASE_URL = "http://localhost:8000";
+export const API_BASE_URL = process.env.VITE_BACKEND_URL;
 
 export const ENDPOINTS = {
   SENTIMENT_RESULT: `${API_BASE_URL}/api/pipeline/result`,
