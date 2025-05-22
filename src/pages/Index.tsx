@@ -48,7 +48,8 @@ const Index = () => {
   );
 
   const finalSentimentResult = sentimentResult || userSentimentResult;
-  const isFinalLoading = isLoading || isUploading;
+  const isFinalLoading =
+    isLoading || isUploading || finalSentimentResult?.status === "processing";
 
   const handleFileUpload = async (data: SentimentResults) => {
     setUserSentimentResult(data);
@@ -158,34 +159,37 @@ const Index = () => {
           </motion.div>
         )}
 
-        {!isFinalLoading && finalSentimentResult && !showSteps && (
-          <section className="space-y-12 mt-14">
-            <h2 className="text-center text-2xl font-semibold text-nlp-blue">
-              📊 Analysis Summary
-            </h2>
-            <SentimentOverallChart {...finalSentimentResult.overall} />
-            <SentimentByTopicChart data={finalSentimentResult.per_topic} />
-            <div className="text-center">
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-6 rounded-2xl text-white shadow-lg inline-flex flex-col items-center gap-4">
-                <p className="text-xl font-bold">
-                  Curious how these insights were generated?
-                </p>
-                <p className="text-sm max-w-sm opacity-90">
-                  Dive into the NLP pipeline — from raw text to insightful
-                  charts.
-                </p>
-                <Button
-                  onClick={() =>
-                    navigate(`/steps?file_id=${finalSentimentResult.file_id}`)
-                  }
-                  className="bg-white text-indigo-700 hover:bg-indigo-50"
-                >
-                  🧠 Explore NLP Steps <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+        {!isFinalLoading &&
+          finalSentimentResult &&
+          finalSentimentResult.status === "done" &&
+          !showSteps && (
+            <section className="space-y-12 mt-14">
+              <h2 className="text-center text-2xl font-semibold text-nlp-blue">
+                📊 Analysis Summary
+              </h2>
+              <SentimentOverallChart {...finalSentimentResult.overall} />
+              <SentimentByTopicChart data={finalSentimentResult.per_topic} />
+              <div className="text-center">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-6 rounded-2xl text-white shadow-lg inline-flex flex-col items-center gap-4">
+                  <p className="text-xl font-bold">
+                    Curious how these insights were generated?
+                  </p>
+                  <p className="text-sm max-w-sm opacity-90">
+                    Dive into the NLP pipeline — from raw text to insightful
+                    charts.
+                  </p>
+                  <Button
+                    onClick={() =>
+                      navigate(`/steps?file_id=${finalSentimentResult.file_id}`)
+                    }
+                    className="bg-white text-indigo-700 hover:bg-indigo-50"
+                  >
+                    🧠 Explore NLP Steps <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </section>
-        )}
+            </section>
+          )}
       </main>
 
       <footer className="border-t mt-16 text-sm text-muted-foreground">

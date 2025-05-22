@@ -6,6 +6,7 @@ import { ENDPOINTS } from "@/constants/api";
 import Papa from "papaparse";
 
 export type SentimentResults = {
+  status: string;
   file_id: string;
   overall: {
     positive: number;
@@ -30,7 +31,7 @@ export const useSentimentResult = (fileId: string | null) => {
     queryKey: ["sentiment-result", fileId],
     queryFn: async () => {
       const res = await axios.get<{ data: SentimentResults }>(
-        `${ENDPOINTS.SENTIMENT_RESULT}`,
+        ENDPOINTS.SENTIMENT_RESULT,
         {
           params: { file_id: fileId },
         }
@@ -38,10 +39,20 @@ export const useSentimentResult = (fileId: string | null) => {
       return res.data.data;
     },
     enabled: !!fileId,
-    staleTime: 5 * 60 * 1000,
+    retry: false,
+    refetchInterval: (query) => {
+      if (
+        query.state.data &&
+        query.state.data.status &&
+        query.state.data.status === "done"
+      )
+        return false;
+
+      return 10000; // stop polling if data is returned
+    },
+    staleTime: 0,
   });
 };
-
 export const useSampleData = () => {
   return useQuery<any[]>({
     queryKey: ["sample-data"],

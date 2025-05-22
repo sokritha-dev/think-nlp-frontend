@@ -19,3 +19,10 @@ export const runSentimentPipeline = async (fileId: string) => {
     }
   );
 };
+
+export const getPipelineStatus = async (fileId: string) => {
+  return axios.get<{ data: any; status: string }>(
+    `${ENDPOINTS.RUN_SENTIMENT_PIPELINE}/status`,
+    { params: { file_id: fileId } }
+  );
+};
