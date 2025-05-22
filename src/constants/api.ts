@@ -6,7 +6,7 @@ export const ENDPOINTS = {
   SENTIMENT_RESULT: `${API_BASE_URL}/api/pipeline/result`,
   SAMPLE_DATA_URL: `${API_BASE_URL}/api/pipeline/sample-data-url`,
   RUN_SENTIMENT_PIPELINE: `${API_BASE_URL}/api/pipeline/sentiment-analysis`,
-  UPLOAD_DATA: `${API_BASE_URL}/api/upload`,
+  UPLOAD_DATA: `${API_BASE_URL}/api/upload/`,
   NORMALIZATION: `${API_BASE_URL}/api/clean/normalize`,
   SPECIAL_REMOVAL: `${API_BASE_URL}/api/clean/remove-special`,
   TOKENIZE: `${API_BASE_URL}/api/clean/tokenize`,
