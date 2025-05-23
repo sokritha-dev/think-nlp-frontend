@@ -4,7 +4,7 @@ const Header = () => {
   return (
     <header className="bg-white shadow-sm">
       <div className="container mx-auto py-3 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <a href="/" className="flex items-center gap-3">
           <img
             src="/thinknlp-logo.png"
             alt="ThinkNLP Logo"
@@ -18,7 +18,7 @@ const Header = () => {
               Learn NLP by analyzing real-world review data
             </p>
           </div>
-        </div>
+        </a>
       </div>
       <Separator />
     </header>
