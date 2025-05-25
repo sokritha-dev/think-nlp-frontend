@@ -125,7 +125,6 @@ const FileUpload = ({
         title: "✅ Analysis Complete",
         description: "Sentiment insights have been successfully generated!",
       });
-      console.log("");
       onFileUpload(sentimentRes.data.data);
     } catch (error: any) {
       console.error("❌ Error during analysis:", error);
@@ -138,6 +137,8 @@ const FileUpload = ({
         variant: "destructive",
       });
     } finally {
+      setUseSample(false);
+
       setLoading(false);
     }
   };

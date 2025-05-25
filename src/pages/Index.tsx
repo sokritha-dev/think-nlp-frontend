@@ -67,7 +67,9 @@ const Index = () => {
         title: "❌ Sentiment Load Failed",
         description: isNetworkError
           ? "No internet connection. Please reconnect."
-          : (error as Error).message || "Unexpected backend error.",
+          : error?.response?.data?.error?.message ||
+            error.message ||
+            "Unexpected backend error.",
         variant: "destructive",
       });
     }
@@ -147,7 +149,7 @@ const Index = () => {
                 {isNetworkError
                   ? "Please reconnect and try again."
                   : error instanceof Error
-                  ? error.message
+                  ? error?.response?.data?.error?.message || error.message
                   : "An error occurred while loading sentiment data."}
               </p>
               <Button onClick={() => refetch()} variant="outline">
