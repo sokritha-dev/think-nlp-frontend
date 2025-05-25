@@ -125,14 +125,16 @@ const FileUpload = ({
         title: "✅ Analysis Complete",
         description: "Sentiment insights have been successfully generated!",
       });
-      console.log('')
+      console.log("");
       onFileUpload(sentimentRes.data.data);
     } catch (error: any) {
       console.error("❌ Error during analysis:", error);
       toast({
         title: "Analysis Failed",
         description:
-          error?.response?.data?.detail || error.message || "Unknown error",
+          error?.response?.data?.error?.message ||
+          error.message ||
+          "Unknown error",
         variant: "destructive",
       });
     } finally {

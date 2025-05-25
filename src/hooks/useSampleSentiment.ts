@@ -1,5 +1,3 @@
-// src/hooks/useSampleSentiment.ts
-
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { ENDPOINTS } from "@/constants/api";
@@ -48,7 +46,7 @@ export const useSentimentResult = (fileId: string | null) => {
       )
         return false;
 
-      return 10000; // stop polling if data is returned
+      return 20000; // stop polling if data is returned
     },
     staleTime: 0,
   });
