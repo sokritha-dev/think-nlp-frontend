@@ -150,6 +150,9 @@ export default function StopwordRemovalStep({
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="w-full">
+                <label className="text-xs text-muted-foreground font-medium block mb-1">
+                  Custom Stopwords (comma-separated)
+                </label>
                 <input
                   className="border px-3 py-1 rounded-md text-sm w-full"
                   placeholder="e.g., room,hotel,staff"
@@ -169,6 +172,9 @@ export default function StopwordRemovalStep({
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="w-full">
+                <label className="text-xs text-muted-foreground font-medium block mb-1">
+                  Exclude from NLTK Stopwords
+                </label>
                 <input
                   className="border px-3 py-1 rounded-md text-sm w-full"
                   placeholder="e.g., not,no,very"
@@ -176,6 +182,19 @@ export default function StopwordRemovalStep({
                   onChange={(e) => setExcludeStopwords(e.target.value)}
                   disabled={isSample}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  NLTK's default English stopwords will be removed — you can
+                  exclude some (e.g., <code>not</code>, <code>very</code>) here
+                  to preserve them.{" "}
+                  <a
+                    href="https://www.nltk.org/nltk_data/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    See NLTK stopwords
+                  </a>
+                </p>
               </div>
             </TooltipTrigger>
             {isSample && (
