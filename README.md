@@ -1,73 +1,96 @@
-# Welcome to your Lovable project
+# ThinkNLP Frontend 💻
 
-## Project info
+_Frontend for the ThinkNLP Educational NLP Platform_
 
-**URL**: https://lovable.dev/projects/e9ba8bd4-7b5f-42c1-a89b-5a1557dbd4d2
+[![Vercel Deployment](https://img.shields.io/vercel/deploy)]()
+[![License](https://img.shields.io/github/license/sokritha-dev/think-nlp-frontend)]()
 
-## How can I edit this code?
+🌐 [Live App](https://www.thinknlp.xyz)  
+🧠 [Backend Repo](https://github.com/sokritha-dev/think-nlp)
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## 📚 Overview
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e9ba8bd4-7b5f-42c1-a89b-5a1557dbd4d2) and start prompting.
+This is the frontend for **ThinkNLP**, an interactive educational platform that helps users explore sentiment analysis and topic modeling with real-world review data.
 
-Changes made via Lovable will be committed automatically to this repo.
+Built with:
 
-**Use your preferred IDE**
+- **React + TypeScript**
+- **Vite**
+- **Tailwind CSS**
+- **TanStack Query**
+- **Deployed via Vercel**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🚀 Features
 
-Follow these steps:
+- File upload for review datasets
+- Step-by-step UI for each NLP pipeline stage
+- Real-time chart visualizations (Sentiment, Topics)
+- Dynamic settings (e.g. number of topics)
+- Celebratory animations and onboarding for beginners
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🛠️ Development
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 📦 Install Dependencies
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+yarn install
 ```
 
-**Edit a file directly in GitHub**
+### 🧪 Start Dev Server
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+yarn dev
+```
 
-**Use GitHub Codespaces**
+### 🔐 Environment Variables
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Make sure you create a .env file which follow .env.sample file
 
-## What technologies are used for this project?
+### 🧱 Folder Structure
 
-This project is built with:
+```bash
+thinknlp-frontend/
+├── .vscode/               # Editor settings
+├── .yarn/                 # Yarn modern mode
+├── node_modules/          # Installed dependencies
+├── public/                # Static assets
+├── src/                   # App source code
+│   ├── components/        # UI components
+│   ├── pages/             # App pages (e.g. Upload, Result)
+│   ├── hooks/             # Custom React hooks
+│   ├── api/               # API functions (fetching NLP results)
+│   └── assets/            # Icons, illustrations
+├── .env                   # Environment variables
+├── .gitignore             # Git rules
+├── yarn.lock              # Lockfile
+├── vite.config.ts         # Vite config
+├── tailwind.config.ts     # Tailwind config
+├── tsconfig*.json         # TypeScript configs
+├── postcss.config.js      # PostCSS config
+├── vercel.json            # Vercel config
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
 
-## How can I deploy this project?
+### 🧪 Testing (Optional)
 
-Simply open [Lovable](https://lovable.dev/projects/e9ba8bd4-7b5f-42c1-a89b-5a1557dbd4d2) and click on Share -> Publish.
+```bash
+# Coming soon: Vitest or React Testing Library
+```
 
-## Can I connect a custom domain to my Lovable project?
+### 📝 License
 
-Yes it is!
+This project is licensed under the MIT License.
+See the LICENSE file for details.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 🙌 Acknowledgements
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- Design inspired by components and flows from **[Lovable AI](https://lovable.so/)**
+- Tailwind UI and shadcn/ui for reusable UI patterns
+- TanStack Query for modern data fetching
+- Chart.js and Lottie for data visualization and animations
