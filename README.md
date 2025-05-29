@@ -2,7 +2,6 @@
 
 _Frontend for the ThinkNLP Educational NLP Platform_
 
-[![Vercel Deployment](https://img.shields.io/vercel/deploy)]()
 [![License](https://img.shields.io/github/license/sokritha-dev/think-nlp-frontend)]()
 
 🌐 [Live App](https://www.thinknlp.xyz)  
@@ -90,7 +89,7 @@ See the LICENSE file for details.
 
 ### 🙌 Acknowledgements
 
-- Design inspired by components and flows from **[Lovable AI](https://lovable.so/)**
+- Design inspired by components and flows from **[Lovable AI](https://www.lovable.dev/)**
 - Tailwind UI and shadcn/ui for reusable UI patterns
 - TanStack Query for modern data fetching
 - Chart.js and Lottie for data visualization and animations
