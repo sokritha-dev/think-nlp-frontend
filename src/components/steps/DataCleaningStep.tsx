@@ -14,6 +14,8 @@ import TokenizationStep from "@/components/data-cleaning-step/TokenizationStep";
 import StopwordRemovalStep from "@/components/data-cleaning-step/StopwordRemovalStep";
 import LemmatizationStep from "@/components/data-cleaning-step/LemmatizationStep";
 import { useCleaningStatus } from "@/hooks/useCleaningStatus";
+import Joyride from "react-joyride";
+import React from "react";
 
 const CLEANING_STEPS = [
   {
@@ -119,8 +121,49 @@ export default function DataCleaningStep({
   const [processStage, setProcessStage] = useState(0);
   const currentStep = CLEANING_STEPS[processStage];
   const StepComponent = currentStep.component;
+  const [runTour, setRunTour] = useState(() => {
+    return localStorage.getItem("seenDataCleaningTour") !== "true";
+  });
 
   const { data: statusData, refetch } = useCleaningStatus(fileId, true);
+
+  const steps = [
+    {
+      target: ".step-button-0",
+      title: "Normalization",
+      content:
+        "We’ll start by standardizing your text—fixing typos, trimming extra spaces, and converting everything to lowercase. This ensures clean, consistent input for downstream tasks.",
+    },
+    {
+      target: ".step-button-1",
+      title: "Remove Special Characters",
+      content:
+        "Next, we strip out non-essential elements like emojis, numbers, and symbols. This reduces noise and focuses the analysis on meaningful language.",
+    },
+    {
+      target: ".step-button-2",
+      title: "Tokenization",
+      content:
+        "Text is then split into individual tokens (typically words). This enables us to analyze word-level patterns and perform tasks like filtering or lemmatization.",
+    },
+    {
+      target: ".step-button-3",
+      title: "Stopword Removal",
+      content:
+        "Common words such as 'the', 'is', or 'and'—which usually carry minimal semantic value—are removed. This helps models focus on the more informative terms.",
+    },
+    {
+      target: ".step-button-4",
+      title: "Lemmatization",
+      content:
+        "We reduce words to their base forms (e.g., 'running' → 'run'). This enhances consistency across variations and improves model generalization.",
+    },
+    {
+      target: ".CompleteContinue",
+      content:
+        "That’s it! You’ve completed the data cleaning phase. Click below to proceed to the next step in the NLP pipeline.",
+    },
+  ];
 
   const recomputeStates = useMemo(() => {
     return (
@@ -136,41 +179,108 @@ export default function DataCleaningStep({
   }, [statusData]);
 
   return (
-    <Card className="animate-fade-in">
-      <CardHeader>
-        <div className="flex justify-between items-start flex-wrap gap-2">
-          <div className="flex-1 min-w-0">
-            <DataCleaningDefinition />
-          </div>
-          <div className="shrink-0">
-            <Badge
-              variant="outline"
-              className="bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap"
-            >
-              Step {processStage + 1}
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
+    <React.Fragment>
+      <Joyride
+        steps={steps}
+        continuous
+        scrollToFirstStep
+        showProgress
+        showSkipButton
+        run={runTour}
+        locale={{
+          back: "Back",
+          close: "Close",
+          last: "Finish", // 👈 Rename 'Last' to 'Finish' or any label
+          next: "Next",
+          skip: "Skip",
+        }}
+        styles={{
+          options: {
+            zIndex: 10000,
+            primaryColor: "#2563eb",
+            textColor: "#1f2937",
+            backgroundColor: "white",
+            arrowColor: "white",
+            overlayColor: "rgba(0, 0, 0, 0.3)",
+            borderRadius: 10,
+            width: 360,
+          },
 
-      <CardContent>
-        {/* Step Navigation */}
-        <div className="flex flex-wrap items-center gap-2 mb-6">
-          {CLEANING_STEPS.map((step, index) => {
-            const firstRecomputeIndex = recomputeStates.findIndex(
-              (v) => v === true
-            );
-            const isBlocked =
-              firstRecomputeIndex !== -1 && index > firstRecomputeIndex;
+          tooltipTitle: {
+            fontSize: "15px",
+            fontWeight: 600,
+            textAlign: "left",
+          },
+          tooltipContent: {
+            fontSize: "13px",
+            lineHeight: "1.4",
+            textAlign: "left",
+            padding: "10px 0px",
+          },
+          buttonNext: {
+            backgroundColor: "#2563eb",
+            color: "white",
+            fontWeight: 600,
+            fontSize: "13px",
+            padding: "6px 14px",
+            borderRadius: "5px",
+          },
+          buttonBack: {
+            marginRight: 6,
+            fontSize: "13px",
+            color: "#6b7280",
+            fontWeight: 500,
+          },
+          buttonClose: {
+            top: 6,
+            right: 6,
+            fontSize: "4px",
+            color: "#9ca3af",
+            padding: "10px",
+          },
+        }}
+        callback={(data) => {
+          if (data.status === "finished" || data.status === "skipped") {
+            localStorage.setItem("seenDataCleaningTour", "true");
+          }
+        }}
+      />
 
-            return (
-              <div key={index} className="flex items-center gap-2">
-                <button
-                  disabled={isBlocked}
-                  onClick={() => {
-                    if (!isBlocked) setProcessStage(index);
-                  }}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition border focus:outline-none
+      <Card className="animate-fade-in">
+        <CardHeader>
+          <div className="flex justify-between items-start flex-wrap gap-2">
+            <div className="flex-1 min-w-0">
+              <DataCleaningDefinition />
+            </div>
+            <div className="shrink-0">
+              <Badge
+                variant="outline"
+                className="bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap"
+              >
+                Step {processStage + 1}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {/* Step Navigation */}
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            {CLEANING_STEPS.map((step, index) => {
+              const firstRecomputeIndex = recomputeStates.findIndex(
+                (v) => v === true
+              );
+              const isBlocked =
+                firstRecomputeIndex !== -1 && index > firstRecomputeIndex;
+
+              return (
+                <div key={index} className="flex items-center gap-2">
+                  <button
+                    disabled={isBlocked}
+                    onClick={() => {
+                      if (!isBlocked) setProcessStage(index);
+                    }}
+                    className={`step-button-${index} flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition border focus:outline-none
                     ${
                       index === processStage
                         ? "bg-nlp-blue text-white border-nlp-blue"
@@ -178,33 +288,61 @@ export default function DataCleaningStep({
                         ? "bg-muted text-muted-foreground border-border opacity-30 cursor-not-allowed"
                         : "bg-muted text-muted-foreground border-border opacity-60"
                     }`}
-                >
-                  <span>{index < processStage ? "✅" : step.icon}</span>
-                  <span>{step.name}</span>
-                </button>
-                {index < CLEANING_STEPS.length - 1 && (
-                  <span className="text-muted-foreground text-xl">→</span>
-                )}
-              </div>
-            );
-          })}
+                  >
+                    <span>{index < processStage ? "✅" : step.icon}</span>
+                    <span>{step.name}</span>
+                  </button>
+                  {index < CLEANING_STEPS.length - 1 && (
+                    <span
+                      className={`text-xl transition ${
+                        index === processStage && !recomputeStates[index + 1]
+                          ? "animate-arrow-glow"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      →
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Step Body */}
+          <StepComponent
+            fileId={fileId}
+            badges={currentStep.badges}
+            description={currentStep.description}
+            refetchStatus={refetch}
+            isSample={isSample}
+          />
+        </CardContent>
+
+        <CardFooter className="flex justify-end">
+          <Button
+            onClick={onStepComplete}
+            disabled={!canProceedToNextStep}
+            className="CompleteContinue"
+          >
+            Complete & Continue
+          </Button>
+        </CardFooter>
+      </Card>
+      <div className="flex justify-end mt-2">
+        <div className="flex justify-end mt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              localStorage.removeItem("seenDataCleaningTour");
+              setRunTour(false);
+              setTimeout(() => setRunTour(true), 100); // restart cleanly
+            }}
+          >
+            🧭 Restart Tour
+          </Button>
         </div>
-
-        {/* Step Body */}
-        <StepComponent
-          fileId={fileId}
-          badges={currentStep.badges}
-          description={currentStep.description}
-          refetchStatus={refetch}
-          isSample={isSample}
-        />
-      </CardContent>
-
-      <CardFooter className="flex justify-end">
-        <Button onClick={onStepComplete} disabled={!canProceedToNextStep}>
-          Complete & Continue
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </React.Fragment>
   );
 }
