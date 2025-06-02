@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, UseQueryResult } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import {
@@ -26,6 +26,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+type Topic = {
+  topic_id: number;
+  keywords: string;
+  label?: string;
+  confidence?: number;
+};
+
+type LDAInfoResponse = {
+  file_id: string;
+  topic_model_id: string;
+  topic_count: number;
+  lda_topics_s3_url: string;
+  topics: Topic[];
+};
 
 export default function TopicModelingStep({
   fileId,
@@ -58,9 +73,32 @@ export default function TopicModelingStep({
     },
   });
 
+  const { data: ldaInfo, isLoading: isInfoLoading } = useQuery({
+    queryKey: ["lda-info", fileId] as const,
+    queryFn: async () => {
+      const res = await axios.get(ENDPOINTS.TOPIC_LDA, {
+        params: { file_id: fileId },
+      });
+      if (res.data.status !== "success") {
+        throw new Error("Failed to fetch topic info");
+      }
+      return res.data.data as LDAInfoResponse;
+    },
+    enabled: !!fileId,
+  });
+
   useEffect(() => {
-    if (fileId) runTopicModeling();
-  }, [fileId, autoSelect, numTopics]);
+    if (ldaInfo && ldaInfo.topic_count) {
+      setNumTopics(ldaInfo.topic_count);
+    }
+
+    if (ldaInfo && ldaInfo.topic_model_id) {
+      const params = new URLSearchParams(window.location.search);
+      params.set("topic_model_id", ldaInfo.topic_model_id);
+      const newUrl = window.location.pathname + "?" + params.toString();
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [ldaInfo, fileId]);
 
   return (
     <Card className="animate-fade-in">
@@ -153,7 +191,7 @@ export default function TopicModelingStep({
                           setNumTopics(val[0]);
                         }}
                         className="w-full"
-                        disabled={isSample}
+                        disabled={isSample || isInfoLoading}
                       />
                     </div>
                   </TooltipTrigger>
@@ -191,6 +229,15 @@ export default function TopicModelingStep({
                 )}
               </Tooltip>
             </div>
+
+            <div className="w-full mt-4">
+              <Button
+                onClick={() => runTopicModeling()}
+                disabled={isPending || !fileId}
+              >
+                {isPending ? "Running..." : "Run Topic Modeling"}
+              </Button>
+            </div>
           </div>
 
           {isPending && (
@@ -220,7 +267,10 @@ export default function TopicModelingStep({
       </CardContent>
 
       <CardFooter className="flex justify-end">
-        <Button onClick={onStepComplete} disabled={!isSuccess}>
+        <Button
+          onClick={onStepComplete}
+          disabled={!isSuccess && ldaInfo?.topic_count !== numTopics}
+        >
           Complete & Continue
         </Button>
       </CardFooter>
