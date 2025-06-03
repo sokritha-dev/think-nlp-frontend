@@ -42,7 +42,10 @@ export default function SentimentAnalysisStep({ onStepComplete }) {
     isRunning,
     shouldRecompute: needRecompute,
     notFound,
+    status,
   } = useSentimentAnalysis({ topicModelId, algorithm });
+
+  const waiting = status === "pending" || status === "processing" || isRunning;
 
   const handleRun = () => {
     runAnalysis();
@@ -140,7 +143,7 @@ export default function SentimentAnalysisStep({ onStepComplete }) {
           </div>
         </div>
 
-        {(isLoading || isRunning) && (
+        {waiting && (
           <TextLoader
             topic="Running sentiment analysis..."
             description="This may take up a few minutes depending on your dataset."
@@ -151,6 +154,12 @@ export default function SentimentAnalysisStep({ onStepComplete }) {
           <div className="text-sm text-muted-foreground mb-4 border border-yellow-200 bg-yellow-50 rounded p-4">
             <strong>This analysis has not been run yet.</strong> Click "Run
             Sentiment Analysis" to compute results using the selected method.
+          </div>
+        )}
+
+        {status === "failed" && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-300 p-3 rounded-md mb-4">
+            ❌ Sentiment analysis failed. Please try again or check your data.
           </div>
         )}
 
