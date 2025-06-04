@@ -52,9 +52,9 @@ export default function TopicModelingStep({
 
   const {
     mutate: runTopicModeling,
-    data,
+    data: ldaMutationData,
     isPending,
-    isSuccess,
+    isSuccess: isMuationSuccess,
   } = useMutation({
     mutationFn: async () => {
       const payload = autoSelect
@@ -73,7 +73,11 @@ export default function TopicModelingStep({
     },
   });
 
-  const { data: ldaInfo, isLoading: isInfoLoading } = useQuery({
+  const {
+    data: ldaQueryData,
+    isLoading: isInfoLoading,
+    isSuccess: isQuerySuccess,
+  } = useQuery({
     queryKey: ["lda-info", fileId] as const,
     queryFn: async () => {
       const res = await axios.get(ENDPOINTS.TOPIC_LDA, {
@@ -87,18 +91,21 @@ export default function TopicModelingStep({
     enabled: !!fileId,
   });
 
+  const data = ldaMutationData || ldaQueryData;
+  const isSuccess = isMuationSuccess || isQuerySuccess;
+
   useEffect(() => {
-    if (ldaInfo && ldaInfo.topic_count) {
-      setNumTopics(ldaInfo.topic_count);
+    if (ldaQueryData && ldaQueryData.topic_count) {
+      setNumTopics(ldaQueryData.topic_count);
     }
 
-    if (ldaInfo && ldaInfo.topic_model_id) {
+    if (ldaQueryData && ldaQueryData.topic_model_id) {
       const params = new URLSearchParams(window.location.search);
-      params.set("topic_model_id", ldaInfo.topic_model_id);
+      params.set("topic_model_id", ldaQueryData.topic_model_id);
       const newUrl = window.location.pathname + "?" + params.toString();
       window.history.replaceState({}, "", newUrl);
     }
-  }, [ldaInfo, fileId]);
+  }, [ldaQueryData, fileId]);
 
   return (
     <Card className="animate-fade-in">
@@ -269,7 +276,7 @@ export default function TopicModelingStep({
       <CardFooter className="flex justify-end">
         <Button
           onClick={onStepComplete}
-          disabled={!isSuccess && ldaInfo?.topic_count !== numTopics}
+          disabled={!isSuccess && data?.topic_count !== numTopics}
         >
           Complete & Continue
         </Button>
