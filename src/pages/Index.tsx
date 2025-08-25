@@ -192,7 +192,7 @@ const Index = () => {
           )}
       </main>
 
-      <footer className="border-t mt-16 text-sm text-muted-foreground">
+      <footer className="border-t mt-8 text-sm text-muted-foreground">
         <div className="container mx-auto flex items-center justify-center h-12">
           © {new Date().getFullYear()} ThinkNLP Lab • Built for Learning
         </div>

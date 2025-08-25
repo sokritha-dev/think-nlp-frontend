@@ -81,7 +81,7 @@ export default function TopicModelingStep({
     queryKey: ["lda-info", fileId] as const,
     queryFn: async () => {
       const res = await axios.get(ENDPOINTS.TOPIC_LDA, {
-        params: { file_id: fileId },
+        params: { file_id: fileId, num_topics: numTopics },
       });
       if (res.data.status !== "success") {
         throw new Error("Failed to fetch topic info");

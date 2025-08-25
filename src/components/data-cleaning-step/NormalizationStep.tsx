@@ -177,9 +177,7 @@ export default function NormalizationStep({
                 <Download className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">
-              Download disabled for sample data
-            </TooltipContent>
+            <TooltipContent side="top">Download the data</TooltipContent>
           </Tooltip>
         </div>
       </div>
